@@ -2,6 +2,7 @@
 package storage
 
 import (
+	"bytes"
 	"github.com/nymtech/demo-mixnet-chat-client/chat-client/commands/alias"
 	"github.com/nymtech/nym-mixnet/sphinx"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -106,17 +107,23 @@ func (db *DbStore) GetAlias(targetPub, providerPub *sphinx.PublicKey) *alias.Ali
 }
 
 func (db *DbStore) RemoveAlias(alias *alias.Alias) {
-	key := db.makeAliasKeyEntry(alias.PublicKey, alias.ProviderPublicKey)
+	db.RemoveAliasByKeys(alias.PublicKey, alias.ProviderPublicKey)
+}
+
+func (db *DbStore) RemoveAliasByKeys(targetPub, providerPub *sphinx.PublicKey) {
+	key := db.makeAliasKeyEntry(targetPub, providerPub)
 	db.delete(key)
 }
 
-func (db *DbStore) GetAllAliases() []*alias.Alias {
+type aliasFilter func(key, value []byte) bool
+
+func (db *DbStore) getFilteredAliases(filterFn aliasFilter) []*alias.Alias {
 	iter := db.db.NewIterator(util.BytesPrefix(aliasPrefix), nil)
 	aliases := make([]*alias.Alias, 0, 10)
 	for iter.Next() {
 		key := iter.Key()
 		val := iter.Value()
-		if val != nil {
+		if val != nil && filterFn(key,val) {
 			targetPub, providerPub := db.recoverKeysFromAliasKeyField(key)
 			aliases = append(aliases, &alias.Alias{
 				AssignedName:      string(val),
@@ -131,6 +138,15 @@ func (db *DbStore) GetAllAliases() []*alias.Alias {
 	}
 
 	return aliases
+}
+
+func (db *DbStore) GetAllAliases() []*alias.Alias {
+	return db.getFilteredAliases(func(k,v []byte) bool {return true})
+}
+
+func (db *DbStore) GetAllAliasesByName(aliasName string) []*alias.Alias {
+	bName := []byte(aliasName)
+	return db.getFilteredAliases(func(k,v []byte) bool {return bytes.Equal(v, bName)})
 }
 
 func (db *DbStore) RemoveAllAliases() {
