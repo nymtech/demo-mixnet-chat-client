@@ -12,19 +12,19 @@ import (
 )
 
 const (
-	noAlias = "<none>"
-	commandName = "alias"
-	showSubCommand = "show"
+	noAlias          = "<none>"
+	commandName      = "alias"
+	showSubCommand   = "show"
 	removeSubCommand = "remove"
-	addSubCommand = "add"
-	allModifier = "all"
+	addSubCommand    = "add"
+	allModifier      = "all"
 )
 
 var (
 	ErrNotEnoughArguments = errors.New("alias command did not receive enough arguments")
-	ErrInvalidArguments = errors.New("alias command received invalid arguments")
-	ErrMalformedRecipient = 			 errors.New("malformed recipient data")
-ErrGeneric = errors.New("could not handle alias command")
+	ErrInvalidArguments   = errors.New("alias command received invalid arguments")
+	ErrMalformedRecipient = errors.New("malformed recipient data")
+	ErrGeneric            = errors.New("could not handle alias command")
 
 	forbiddenAliases = []string{
 		noAlias,
@@ -35,7 +35,6 @@ ErrGeneric = errors.New("could not handle alias command")
 		allModifier,
 	}
 )
-
 
 type AliasStore interface {
 	StoreAlias(alias *Alias)
@@ -63,16 +62,14 @@ func (a *Alias) String() string {
 	return fmt.Sprintf("Alias: %s - Public Key: %s Provider's Public Key: %s", assignedName, b64Key, b64ProvKey)
 }
 
-
 type AliasCmd struct {
-	g     *gocui.Gui
-	store AliasStore
+	g       *gocui.Gui
+	store   AliasStore
 	session *types.Session
 
 	// TODO: possible set of subcommands? so separate explicit handlers for remove, add, show, etc
 	//subCommands []commands.Command
 }
-
 
 func (a *AliasCmd) keysFromBytes(targetKey, targetProvKey []byte) (*sphinx.PublicKey, *sphinx.PublicKey) {
 	if targetKey == nil || targetProvKey == nil {
@@ -95,7 +92,6 @@ func (a *AliasCmd) getCurrentRecipientKeys() (*sphinx.PublicKey, *sphinx.PublicK
 	return a.keysFromBytes(a.session.Recipient().PubKey, a.session.Recipient().Provider.PubKey)
 }
 
-
 func (a *AliasCmd) getTargetKeysFromStrings(targetKey, targetProvKey string) (*sphinx.PublicKey, *sphinx.PublicKey) {
 	targetKeyB, err := base64.URLEncoding.DecodeString(targetKey)
 	if err != nil {
@@ -108,14 +104,6 @@ func (a *AliasCmd) getTargetKeysFromStrings(targetKey, targetProvKey string) (*s
 
 	return a.keysFromBytes(targetKeyB, targetProvKeyB)
 }
-//
-//func (a *AliasCmd) mustGetMessagesView() *gocui.View {
-//	v, err := a.g.View(layout.InputViewName)
-//	if err != nil {
-//		panic(err)
-//	}
-//	return v
-//}
 
 func checkIfValidName(name string) bool {
 	for _, invalidAlias := range forbiddenAliases {
@@ -290,8 +278,8 @@ func (a *AliasCmd) Handle(args []string) error {
 // Each equivalent function for each command will take required context to resolve the command
 func AliasCommand(g *gocui.Gui, store AliasStore, session *types.Session) commands.Command {
 	return &AliasCmd{
-		g:     g,
-		store: store,
-		session:session,
+		g:       g,
+		store:   store,
+		session: session,
 	}
 }
