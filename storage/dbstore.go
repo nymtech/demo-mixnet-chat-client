@@ -2,7 +2,7 @@
 package storage
 
 import (
-	"github.com/nymtech/demo-mixnet-chat-client/chat-client/alias"
+	"github.com/nymtech/demo-mixnet-chat-client/chat-client/commands/alias"
 	"github.com/nymtech/nym-mixnet/sphinx"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"
@@ -14,15 +14,15 @@ var (
 	aliasPrefix = []byte("ALIAS")
 )
 
-// Store represents all data required to interact with the storage.
-type Store struct {
+// DbStore represents all data required to interact with the storage.
+type DbStore struct {
 	db *leveldb.DB
 }
 
 // get gets the value corresponding to particular key. Returns nil if it doesn't exist.
-func (s *Store) get(key []byte) []byte {
+func (db *DbStore) get(key []byte) []byte {
 	key = nonNilBytes(key)
-	res, err := s.db.Get(key, nil)
+	res, err := db.db.Get(key, nil)
 	if err != nil {
 		if err == errors.ErrNotFound {
 			return nil
@@ -33,18 +33,18 @@ func (s *Store) get(key []byte) []byte {
 }
 
 // set sets particular key value pair.
-func (s *Store) set(key []byte, value []byte) {
+func (db *DbStore) set(key []byte, value []byte) {
 	key = nonNilBytes(key)
 	value = nonNilBytes(value)
-	if err := s.db.Put(key, value, nil); err != nil {
+	if err := db.db.Put(key, value, nil); err != nil {
 		panic(err)
 	}
 }
 
 // delete removes particular key value pair.
-func (s *Store) delete(key []byte) {
+func (db *DbStore) delete(key []byte) {
 	key = nonNilBytes(key)
-	if err := s.db.Delete(key, nil); err != nil {
+	if err := db.db.Delete(key, nil); err != nil {
 		panic(err)
 	}
 }
@@ -54,7 +54,7 @@ func (s *Store) delete(key []byte) {
 // Each alias corresponds to the tuple of user's public key and the public key of it's provider
 // each entry follows the structure of: [ ALIAS_PREFIX || PUBLIC_KEY || PROVIDER_PUBLIC_KEY ] -- ALIAS
 
-func (s *Store) makeAliasKeyEntry(targetPub, providerPub *sphinx.PublicKey) []byte {
+func (db *DbStore) makeAliasKeyEntry(targetPub, providerPub *sphinx.PublicKey) []byte {
 	if targetPub == nil || providerPub == nil {
 		return []byte{}
 	}
@@ -65,7 +65,7 @@ func (s *Store) makeAliasKeyEntry(targetPub, providerPub *sphinx.PublicKey) []by
 	return key
 }
 
-func (s *Store) recoverKeysFromAliasKeyField(key []byte) (*sphinx.PublicKey, *sphinx.PublicKey) {
+func (db *DbStore) recoverKeysFromAliasKeyField(key []byte) (*sphinx.PublicKey, *sphinx.PublicKey) {
 	if len(key) != len(aliasPrefix)+2*sphinx.PublicKeySize {
 		return nil, nil
 	}
@@ -84,15 +84,15 @@ func (s *Store) recoverKeysFromAliasKeyField(key []byte) (*sphinx.PublicKey, *sp
 	return targetPub, providerPub
 }
 
-func (s *Store) StoreAlias(alias *alias.Alias) {
-	key := s.makeAliasKeyEntry(alias.PublicKey, alias.ProviderPublicKey)
+func (db *DbStore) StoreAlias(alias *alias.Alias) {
+	key := db.makeAliasKeyEntry(alias.PublicKey, alias.ProviderPublicKey)
 	// even if the entry already exists, overwrite it
-	s.set(key, []byte(alias.AssignedName))
+	db.set(key, []byte(alias.AssignedName))
 }
 
-func (s *Store) GetAlias(targetPub, providerPub *sphinx.PublicKey) *alias.Alias {
-	key := s.makeAliasKeyEntry(targetPub, providerPub)
-	aliasB := s.get(key)
+func (db *DbStore) GetAlias(targetPub, providerPub *sphinx.PublicKey) *alias.Alias {
+	key := db.makeAliasKeyEntry(targetPub, providerPub)
+	aliasB := db.get(key)
 	assignedName := ""
 	if aliasB != nil {
 		assignedName = string(aliasB)
@@ -105,19 +105,19 @@ func (s *Store) GetAlias(targetPub, providerPub *sphinx.PublicKey) *alias.Alias 
 	}
 }
 
-func (s *Store) RemoveAlias(alias *alias.Alias) {
-	key := s.makeAliasKeyEntry(alias.PublicKey, alias.ProviderPublicKey)
-	s.delete(key)
+func (db *DbStore) RemoveAlias(alias *alias.Alias) {
+	key := db.makeAliasKeyEntry(alias.PublicKey, alias.ProviderPublicKey)
+	db.delete(key)
 }
 
-func (s *Store) GetAllAliases() []*alias.Alias {
-	iter := s.db.NewIterator(util.BytesPrefix(aliasPrefix), nil)
+func (db *DbStore) GetAllAliases() []*alias.Alias {
+	iter := db.db.NewIterator(util.BytesPrefix(aliasPrefix), nil)
 	aliases := make([]*alias.Alias, 0, 10)
 	for iter.Next() {
 		key := iter.Key()
 		val := iter.Value()
 		if val != nil {
-			targetPub, providerPub := s.recoverKeysFromAliasKeyField(key)
+			targetPub, providerPub := db.recoverKeysFromAliasKeyField(key)
 			aliases = append(aliases, &alias.Alias{
 				AssignedName:      string(val),
 				PublicKey:         targetPub,
@@ -133,10 +133,10 @@ func (s *Store) GetAllAliases() []*alias.Alias {
 	return aliases
 }
 
-func (s *Store) RemoveAllAliases() {
-	iter := s.db.NewIterator(util.BytesPrefix(aliasPrefix), nil)
+func (db *DbStore) RemoveAllAliases() {
+	iter := db.db.NewIterator(util.BytesPrefix(aliasPrefix), nil)
 	for iter.Next() {
-		s.delete(iter.Key())
+		db.delete(iter.Key())
 	}
 
 	iter.Release()
@@ -146,8 +146,8 @@ func (s *Store) RemoveAllAliases() {
 }
 
 // Close closes the database connection. It should be called upon server shutdown.
-func (s *Store) Close() {
-	s.db.Close()
+func (db *DbStore) Close() {
+	db.db.Close()
 }
 
 func nonNilBytes(bz []byte) []byte {
@@ -157,15 +157,15 @@ func nonNilBytes(bz []byte) []byte {
 	return bz
 }
 
-// New returns new instance of a store.
-func New(name string, dir string) (*Store, error) {
+// NewDbStore returns new instance of a DbStore.
+func NewDbStore(name string, dir string) (*DbStore, error) {
 	dbPath := filepath.Join(dir, name+".db")
 	db, err := leveldb.OpenFile(dbPath, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	store := &Store{
+	store := &DbStore{
 		db: db,
 	}
 	return store, nil
