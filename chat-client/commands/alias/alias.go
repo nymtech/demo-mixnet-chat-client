@@ -9,6 +9,7 @@ import (
 	"github.com/nymtech/demo-mixnet-chat-client/chat-client/commands"
 	"github.com/nymtech/demo-mixnet-chat-client/gui"
 	"github.com/nymtech/demo-mixnet-chat-client/types"
+	"github.com/nymtech/demo-mixnet-chat-client/utils"
 	"github.com/nymtech/nym-mixnet/sphinx"
 )
 
@@ -72,25 +73,8 @@ type AliasCmd struct {
 	//subCommands []commands.Command
 }
 
-func (a *AliasCmd) keysFromBytes(targetKey, targetProvKey []byte) (*sphinx.PublicKey, *sphinx.PublicKey) {
-	if targetKey == nil || targetProvKey == nil {
-		return nil, nil
-	}
-	targetPub := new(sphinx.PublicKey)
-	targetProvPub := new(sphinx.PublicKey)
-
-	if err := targetPub.UnmarshalBinary(targetKey); err != nil {
-		return nil, nil
-	}
-	if err := targetProvPub.UnmarshalBinary(targetProvKey); err != nil {
-		return nil, nil
-	}
-
-	return targetPub, targetProvPub
-}
-
 func (a *AliasCmd) getCurrentRecipientKeys() (*sphinx.PublicKey, *sphinx.PublicKey) {
-	return a.keysFromBytes(a.session.Recipient().PubKey, a.session.Recipient().Provider.PubKey)
+	return utils.KeysFromBytes(a.session.Recipient().PubKey, a.session.Recipient().Provider.PubKey)
 }
 
 func (a *AliasCmd) getTargetKeysFromStrings(targetKey, targetProvKey string) (*sphinx.PublicKey, *sphinx.PublicKey) {
@@ -103,7 +87,7 @@ func (a *AliasCmd) getTargetKeysFromStrings(targetKey, targetProvKey string) (*s
 		return nil, nil
 	}
 
-	return a.keysFromBytes(targetKeyB, targetProvKeyB)
+	return utils.KeysFromBytes(targetKeyB, targetProvKeyB)
 }
 
 func checkIfValidName(name string) bool {
@@ -144,6 +128,7 @@ func (a *AliasCmd) handleRemove(args []string) error {
 		// we remove it for current entry
 		currentPub, currentProvPub := a.getCurrentRecipientKeys()
 		if currentPub != nil && currentProvPub != nil {
+			gui.WriteNotice("removing alias for current recipient\n", a.g)
 			a.store.RemoveAliasByKeys(currentPub, currentProvPub)
 			a.session.UpdateAlias("")
 			return nil
@@ -152,6 +137,7 @@ func (a *AliasCmd) handleRemove(args []string) error {
 		}
 	case 2:
 		if args[1] == allModifier {
+			gui.WriteNotice("removing ALL stored aliases\n", a.g)
 			a.store.RemoveAllAliases()
 			a.session.UpdateAlias("")
 			return nil
@@ -161,6 +147,7 @@ func (a *AliasCmd) handleRemove(args []string) error {
 	case 3:
 		targetKey, targetProvKey := a.getTargetKeysFromStrings(args[1], args[2])
 		if targetKey != nil && targetProvKey != nil {
+			gui.WriteNotice("removing alias for the specified client...\n", a.g)
 			a.store.RemoveAliasByKeys(targetKey, targetProvKey)
 			// check if the target is not the same as current session recipient
 			if bytes.Equal(targetKey.Bytes(), a.session.Recipient().PubKey) {
@@ -194,6 +181,7 @@ func (a *AliasCmd) handleAdd(args []string) error {
 				PublicKey:         currentPub,
 				ProviderPublicKey: currentProvPub,
 			}
+			gui.WriteNotice(fmt.Sprintf("Creating new alias: %s\n", alias.String()), a.g)
 			a.store.StoreAlias(alias)
 			a.session.UpdateAlias(args[1])
 			return nil
@@ -211,6 +199,7 @@ func (a *AliasCmd) handleAdd(args []string) error {
 				PublicKey:         targetKey,
 				ProviderPublicKey: targetProvKey,
 			}
+			gui.WriteNotice(fmt.Sprintf("Creating new alias: %s\n", alias.String()), a.g)
 			a.store.StoreAlias(alias)
 			// check if the target is not the same as current session recipient
 			if bytes.Equal(targetKey.Bytes(), a.session.Recipient().PubKey) {
@@ -245,12 +234,12 @@ func (a *AliasCmd) handleShow(args []string) error {
 		if args[1] == allModifier {
 			aliases = a.store.GetAllAliases()
 			if len(aliases) == 0 {
-				gui.WriteInfo("no aliases assigned", a.g, "alias_info")
+				gui.WriteInfo("no aliases assigned\n", a.g, "alias_info")
 			}
 		} else {
 			aliases = a.store.GetAllAliasesByName(args[1])
 			if len(aliases) == 0 {
-				gui.WriteInfo(fmt.Sprintf("no clients with alias: %s", args[1]), a.g, "alias_info")
+				gui.WriteInfo(fmt.Sprintf("no clients with alias: %s\n", args[1]), a.g, "alias_info")
 			}
 		}
 
