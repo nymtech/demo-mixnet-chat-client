@@ -144,6 +144,7 @@ func (a *AliasCmd) handleRemove(args []string) error {
 		currentPub, currentProvPub := a.getCurrentRecipientKeys()
 		if currentPub != nil && currentProvPub != nil {
 			a.store.RemoveAliasByKeys(currentPub, currentProvPub)
+			a.session.UpdateAlias("")
 			return nil
 		} else {
 			return ErrMalformedRecipient
@@ -188,6 +189,7 @@ func (a *AliasCmd) handleAdd(args []string) error {
 				ProviderPublicKey: currentProvPub,
 			}
 			a.store.StoreAlias(alias)
+			a.session.UpdateAlias(args[1])
 			return nil
 		} else {
 			return errors.New("malformed recipient data")
