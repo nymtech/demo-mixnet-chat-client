@@ -133,16 +133,42 @@ func (a *AliasCmd) handleRemove(args []string) error {
 }
 
 // we expect the following:
-// `add <alias` which will create alias for the current recipient
+// `add <alias>` which will create alias for the current recipient
 // `add <pubkey> <provider_pubkey> <alias>` which will create alias for the specified recipient. note: both keys have to be provided in base64
 func (a *AliasCmd) handleAdd(args []string) error {
 	// first element in the slice is the name of the command itself and always exists
 	switch len(args) {
 	case 1:
+		return ErrNotEnoughArguments
+	case 2:
+		currentPub, currentProvPub := a.getCurrentRecipientKeys()
+		if currentPub != nil && currentProvPub != nil {
+			alias := &Alias{
+				AssignedName:      args[1],
+				PublicKey:         currentPub,
+				ProviderPublicKey: currentProvPub,
+			}
+			a.store.StoreAlias(alias)
+			return nil
+		} else {
+			return errors.New("malformed recipient data")
+		}
+	case 4:
+		targetKey, targetProvKey := a.getTargetKeysFromStrings(args[1], args[2])
+		if targetKey != nil && targetProvKey != nil {
+			alias := &Alias{
+				AssignedName:      args[3],
+				PublicKey:         targetKey,
+				ProviderPublicKey: targetProvKey,
+			}
+			a.store.StoreAlias(alias)
+			return nil
+		} else {
+			return ErrInvalidArguments
+		}
 	default:
 		return ErrInvalidArguments
 	}
-	return nil
 }
 
 // we expect the following:
@@ -157,7 +183,6 @@ func (a *AliasCmd) handleShow(args []string) error {
 	default:
 		return ErrInvalidArguments
 	}
-	return nil
 }
 
 func (a *AliasCmd) Handle(args []string) error {
