@@ -1,6 +1,7 @@
 package alias
 
 import (
+	"bytes"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -152,6 +153,7 @@ func (a *AliasCmd) handleRemove(args []string) error {
 	case 2:
 		if args[1] == allModifier {
 			a.store.RemoveAllAliases()
+			a.session.UpdateAlias("")
 			return nil
 		} else {
 			return ErrInvalidArguments
@@ -160,6 +162,10 @@ func (a *AliasCmd) handleRemove(args []string) error {
 		targetKey, targetProvKey := a.getTargetKeysFromStrings(args[1], args[2])
 		if targetKey != nil && targetProvKey != nil {
 			a.store.RemoveAliasByKeys(targetKey, targetProvKey)
+			// check if the target is not the same as current session recipient
+			if bytes.Equal(targetKey.Bytes(), a.session.Recipient().PubKey) {
+				a.session.UpdateAlias("")
+			}
 			return nil
 		} else {
 			return ErrInvalidArguments
