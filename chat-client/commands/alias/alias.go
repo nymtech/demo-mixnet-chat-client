@@ -212,6 +212,10 @@ func (a *AliasCmd) handleAdd(args []string) error {
 				ProviderPublicKey: targetProvKey,
 			}
 			a.store.StoreAlias(alias)
+			// check if the target is not the same as current session recipient
+			if bytes.Equal(targetKey.Bytes(), a.session.Recipient().PubKey) {
+				a.session.UpdateAlias(args[3])
+			}
 			return nil
 		} else {
 			return ErrInvalidArguments
