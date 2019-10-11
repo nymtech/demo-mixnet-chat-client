@@ -15,11 +15,9 @@ import (
 	"github.com/nymtech/demo-mixnet-chat-client/message"
 	"github.com/nymtech/demo-mixnet-chat-client/storage"
 	"github.com/nymtech/demo-mixnet-chat-client/types"
-	"github.com/nymtech/demo-mixnet-chat-client/utils"
 	"github.com/nymtech/nym-mixnet/client"
 	clientConfig "github.com/nymtech/nym-mixnet/client/config"
 	"github.com/nymtech/nym-mixnet/config"
-	"github.com/nymtech/nym-mixnet/sphinx"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -70,36 +68,6 @@ func New(baseClientCfg *clientConfig.Config) (*ChatClient, error) {
 	}
 
 	return cc, nil
-}
-
-
-
-func (c *ChatClient) makeAliasCacheKey(senderPublicKey, senderProviderPublicKey []byte) string {
-	b64SenderKey := base64.URLEncoding.EncodeToString(senderPublicKey)
-	b64SenderProviderKey := base64.URLEncoding.EncodeToString(senderProviderPublicKey)
-	cacheEntryKey := b64SenderKey + b64SenderProviderKey
-	return cacheEntryKey
-}
-
-
-// naming things is difficult...
-func (c *ChatClient) recoverKeysFromCacheKey(key string) (*sphinx.PublicKey, *sphinx.PublicKey) {
-	// due to both keys having same and constant length, we can just split the key in half
-	// and due to it being in base64, hence containing only ASCII, we don't need to bother with runes and UTF8 encoding
-	bKey := []byte(key)
-	key1 := string(bKey[:len(bKey)/2])
-	key2 := string(bKey[len(bKey)/2:])
-
-	decodedKey1, err := base64.URLEncoding.DecodeString(key1)
-	if err != nil {
-		return nil, nil
-	}
-	decodedKey2, err := base64.URLEncoding.DecodeString(key2)
-	if err != nil {
-		return nil, nil
-	}
-
-	return utils.KeysFromBytes(decodedKey1, decodedKey2)
 }
 
 // checkCache makes sure that any entry present in the cache still exists in the store
@@ -156,11 +124,6 @@ func (c *ChatClient) parseCommand(g *gocui.Gui, cmd string) error {
 	return nil
 }
 
-func (c *ChatClient) resetView(v *gocui.View) error {
-	v.Clear()
-	return v.SetCursor(0, 0)
-}
-
 func (c *ChatClient) parseReceivedMessages(msgs [][]byte) []*message.ChatMessage {
 	parsedMsgs := make([]*message.ChatMessage, 0, len(msgs))
 	if msgs == nil {
@@ -179,37 +142,7 @@ func (c *ChatClient) parseReceivedMessages(msgs [][]byte) []*message.ChatMessage
 	return parsedMsgs
 }
 
-func (c *ChatClient) defaultDisplayName(key []byte) string {
-	b64Key := base64.URLEncoding.EncodeToString(key)
-	return "??? - " + b64Key[:8] + "..."
-}
-
-func (c *ChatClient) getDisplayName(senderPublicKey, senderProviderPublicKey []byte) string {
-	cacheEntryKey := c.makeAliasCacheKey(senderPublicKey, senderProviderPublicKey)
-	displayName, ok := c.aliasCache[cacheEntryKey]
-	if ok {
-		return displayName
-	}
-	if storedAlias := c.tryAliasStore(senderPublicKey, senderProviderPublicKey); storedAlias != nil {
-		// it's not in cache so update the cache
-		if storedAlias.AssignedName != "" {
-			cacheEntryKey := c.makeAliasCacheKey(senderPublicKey, senderProviderPublicKey)
-			c.aliasCache[cacheEntryKey] = storedAlias.AssignedName
-			return storedAlias.AssignedName
-		}
-	}
-	return c.defaultDisplayName(senderPublicKey)
-}
-
-func (c *ChatClient) tryAliasStore(senderPublicKey, senderProviderPublicKey []byte) *alias.Alias {
-	senderKey, senderProvKey := utils.KeysFromBytes(senderPublicKey, senderProviderPublicKey)
-	if senderKey != nil && senderProvKey != nil {
-		return c.chatStore.GetAlias(senderKey, senderProvKey)
-	}
-	return nil
-}
-
-func (c *ChatClient) pollForMessages(g *gocui.Gui) {
+func (c *ChatClient) pollForMessages(g *gocui.Gui, sessionHalt <-chan struct{}) {
 	time.Sleep(time.Second) // to make sure the main loop of gui starts first; TODO: better solution
 	heartbeat := time.NewTicker(50 * time.Millisecond)
 	// note: this does not perform any external queries,
@@ -217,6 +150,8 @@ func (c *ChatClient) pollForMessages(g *gocui.Gui) {
 	for {
 		select {
 		case <-c.haltedCh:
+			return
+		case <-sessionHalt:
 			return
 		case <-heartbeat.C:
 			msgs := c.mixClient.GetReceivedMessages()
@@ -296,25 +231,11 @@ func (c *ChatClient) initCommands(g *gocui.Gui) {
 	}
 }
 
-func (c *ChatClient) updateSendViewTitle(g *gocui.Gui) error {
-	v, err := g.View(layout.InputViewName)
-	if err != nil {
-		return err
-	}
-	v.Title = "send to: " + c.session.RecipientAlias()
-	return nil
-}
-
-func (c *ChatClient) Start() error {
-	if err := c.mixClient.Start(); err != nil {
-		return err
-	}
-
+func (c *ChatClient) startNewChatSession(sessionHalt chan struct{}) error {
 	// firstly choose our recipient, then create proper gui
 	// if this command line chat was to be used further down the line,
 	// I would have probably tried to implement the list selection in gocui,
 	// but using two frameworks is just way simpler in this case
-
 	chosenClientOption := refreshClientOption
 	var clientMapping map[string]config.ClientConfig
 	for chosenClientOption == refreshClientOption {
@@ -326,7 +247,6 @@ func (c *ChatClient) Start() error {
 
 	recipient := clientMapping[chosenClientOption]
 	storedAlias := c.tryAliasStore(recipient.PubKey, recipient.Provider.PubKey)
-
 	c.session = types.NewSession(recipient, c.getDisplayName(recipient.PubKey, recipient.Provider.PubKey))
 
 	g, err := gui.CreateGUI()
@@ -355,16 +275,27 @@ func (c *ChatClient) Start() error {
 		fullRecipientName,
 	), g, "Reminder")
 
-	go c.pollForMessages(g)
+	go c.pollForMessages(g, sessionHalt)
 
-	// TODO: write available commands
 	c.showAvailableCommands(g)
 	if err := g.MainLoop(); err != nil && err != gocui.ErrQuit {
 		return err
 	}
-	// TODO: allow to start over with new recipient?
 
 	return nil
+}
+
+func (c *ChatClient) Run() error {
+	if err := c.mixClient.Start(); err != nil {
+		return err
+	}
+
+	var exitErr error = nil
+	for exitErr == nil {
+		sessionHalt := make(chan struct{})
+		exitErr = c.startNewChatSession(sessionHalt)
+	}
+	return exitErr
 }
 
 // Wait waits till the client is terminated for any reason.
