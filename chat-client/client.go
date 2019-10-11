@@ -236,6 +236,9 @@ func (c *ChatClient) initCommands(g *gocui.Gui) {
 
 func (c *ChatClient) startNewChatSession(sessionHalt chan struct{}) error {
 	recipient, err := c.getRecipient()
+	if err != nil {
+		return err
+	}
 	storedAlias := c.tryAliasStore(recipient.PubKey, recipient.Provider.PubKey)
 
 	fullRecipientName := ""
@@ -246,10 +249,6 @@ func (c *ChatClient) startNewChatSession(sessionHalt chan struct{}) error {
 	}
 
 	c.session = types.NewSession(recipient, fullRecipientName)
-
-	if err != nil {
-		return err
-	}
 
 	g, err := gui.CreateGUI()
 	if err != nil {
