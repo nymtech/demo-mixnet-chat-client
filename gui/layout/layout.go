@@ -38,17 +38,5 @@ func Layout(g *gocui.Gui) error {
 		input.Editable = true
 
 	}
-	//
-	//if name, err := g.SetView("name", maxX/2-10, maxY/2-1, maxX/2+10, maxY/2+1); err != nil {
-	//	if err != gocui.ErrUnknownView {
-	//		return err
-	//	}
-	//	g.SetCurrentView("name")
-	//	name.Title = " name: "
-	//	name.Autoscroll = false
-	//	name.Wrap = true
-	//	name.Editable = true
-	//}
-
 	return nil
 }
