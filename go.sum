@@ -116,6 +116,8 @@ github.com/nymtech/nym-mixnet v0.1.3 h1:X+ghdU1v2A4STY6p1DRzhGS04JFICmI9Pz62SqHx
 github.com/nymtech/nym-mixnet v0.1.3/go.mod h1:dOhj/73sM3N8digrpGQvHHRAorg4X7vxh8A1gBAMiEA=
 github.com/nymtech/nym-mixnet v0.1.4 h1:cx0D7NPeA7SCaknUHq+LDlGmzA9bMlWYjC+ghiXPl+0=
 github.com/nymtech/nym-mixnet v0.1.4/go.mod h1:dOhj/73sM3N8digrpGQvHHRAorg4X7vxh8A1gBAMiEA=
+github.com/nymtech/nym-mixnet v0.1.5 h1:2rCHwLWN252JpNMfZhozMt6kzSPeNxXgerBFVX1PSGw=
+github.com/nymtech/nym-mixnet v0.1.5/go.mod h1:DiKY1awqolVHiSMNNYs8BnVLZG8P4aMF9pqETSvOV5Q=
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/ginkgo v1.7.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/ginkgo v1.10.1/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=

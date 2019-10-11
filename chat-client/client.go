@@ -20,6 +20,7 @@ import (
 	clientConfig "github.com/nymtech/nym-mixnet/client/config"
 	"github.com/nymtech/nym-mixnet/config"
 	"github.com/nymtech/nym-mixnet/sphinx"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -35,7 +36,7 @@ const (
 const (
 	// TODO: create new config.toml or include this in existing client config?
 	defaultStoreFile = "chatstore"
-	defaultStoreDir  = ""
+	defaultStoreDir  = "chat-application"
 )
 
 type ChatClient struct {
@@ -59,7 +60,7 @@ func New(baseClientCfg *clientConfig.Config) (*ChatClient, error) {
 	chatStoreFile := defaultStoreFile
 	chatStoreDir := defaultStoreDir
 
-	chatStore, err := storage.NewDbStore(chatStoreFile, chatStoreDir)
+	chatStore, err := storage.NewDbStore(chatStoreFile, filepath.Join(baseClientCfg.Client.FullMixAppsDir(), chatStoreDir))
 
 	cc := &ChatClient{
 		haltedCh:   make(chan struct{}),
@@ -393,6 +394,7 @@ func toChoosable(client config.ClientConfig) string {
 	return fmt.Sprintf("ID: %s\t@[Provider]\t%s", b64Key, b64ProviderKey)
 }
 
+// TODO: incorperate aliases here
 func makeChoosables(clients []config.ClientConfig) (map[string]config.ClientConfig, []string) {
 	choosableClients := make(map[string]config.ClientConfig)
 	options := make([]string, len(clients)+1)
