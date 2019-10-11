@@ -317,30 +317,35 @@ func (c *ChatClient) halt() {
 	close(c.haltedCh)
 }
 
-func toChoosable(client config.ClientConfig) string {
+func (c *ChatClient) toChoosable(client config.ClientConfig) string {
 	b64Key := base64.URLEncoding.EncodeToString(client.PubKey)
 	b64ProviderKey := base64.URLEncoding.EncodeToString(client.Provider.PubKey)
-	// while normally it's unsafe to directly index string, it's safe here
-	// as id is guaranteed to only hold ascii characters due to being b64 encoding of the key
-	return fmt.Sprintf("ID: %s\t@[Provider]\t%s", b64Key, b64ProviderKey)
+
+	aliasedName := "<no alias>"
+	possibleAlias := c.tryAliasStore(client.PubKey, client.Provider.PubKey)
+	if possibleAlias != nil && possibleAlias.AssignedName != "" {
+		aliasedName = possibleAlias.AssignedName
+	}
+
+	return fmt.Sprintf("%s- (Pubkey) %s\t@[Provider] %s", aliasedName, b64Key, b64ProviderKey)
 }
 
 // TODO: incorperate aliases here
-func makeChoosables(clients []config.ClientConfig) (map[string]config.ClientConfig, []string) {
-	choosableClients := make(map[string]config.ClientConfig)
-	options := make([]string, len(clients)+1)
-	for i, client := range clients {
-		choosableClient := toChoosable(client)
-		options[i] = choosableClient
-		choosableClients[choosableClient] = client // basically a mapping from the string back to original struct
+func (c *ChatClient) makeChoosables(recipients []config.ClientConfig) (map[string]config.ClientConfig, []string) {
+	choosableRecipients := make(map[string]config.ClientConfig)
+	options := make([]string, len(recipients)+1)
+	for i, recipient := range recipients {
+		choosableRecipient := c.toChoosable(recipient)
+		options[i] = choosableRecipient
+		choosableRecipients[choosableRecipient] = recipient // basically a mapping from the string back to original struct
 	}
 
-	options[len(clients)] = refreshClientOption
-	return choosableClients, options
+	options[len(recipients)] = refreshClientOption
+	return choosableRecipients, options
 }
 
 func (c *ChatClient) chooseRecipient() (string, map[string]config.ClientConfig) {
-	choosableClients, choosableOptions := makeChoosables(c.mixClient.Network.Clients)
+	choosableRecipients, choosableOptions := c.makeChoosables(c.mixClient.Network.Clients)
 
 	var chosenClientOption string
 	prompt := &survey.Select{
@@ -354,5 +359,5 @@ func (c *ChatClient) chooseRecipient() (string, map[string]config.ClientConfig) 
 		return "", nil
 	}
 	// do not return actual client config as the chosen option might be "refresh"
-	return chosenClientOption, choosableClients
+	return chosenClientOption, choosableRecipients
 }
