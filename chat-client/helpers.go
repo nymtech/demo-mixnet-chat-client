@@ -2,6 +2,7 @@ package chat_client
 
 import (
 	"encoding/base64"
+	"fmt"
 	"github.com/jroimartin/gocui"
 	"github.com/nymtech/demo-mixnet-chat-client/chat-client/commands/alias"
 	"github.com/nymtech/demo-mixnet-chat-client/gui/layout"
@@ -19,7 +20,7 @@ func (c *ChatClient) updateSendViewTitle(g *gocui.Gui) error {
 	if err != nil {
 		return err
 	}
-	v.Title = "send to: " + c.session.RecipientAlias()
+	v.Title = fmt.Sprintf(" send to: %s ", c.session.RecipientAlias())
 	return nil
 }
 
@@ -29,7 +30,6 @@ func (c *ChatClient) makeAliasCacheKey(senderPublicKey, senderProviderPublicKey 
 	cacheEntryKey := b64SenderKey + b64SenderProviderKey
 	return cacheEntryKey
 }
-
 
 // naming things is difficult...
 func (c *ChatClient) recoverKeysFromCacheKey(key string) (*sphinx.PublicKey, *sphinx.PublicKey) {

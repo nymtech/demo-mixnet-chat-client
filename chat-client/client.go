@@ -4,8 +4,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/AlecAivazis/survey/v2"
-	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/golang/protobuf/proto"
 	"github.com/jroimartin/gocui"
 	"github.com/nymtech/demo-mixnet-chat-client/chat-client/commands"
@@ -17,7 +15,6 @@ import (
 	"github.com/nymtech/demo-mixnet-chat-client/types"
 	"github.com/nymtech/nym-mixnet/client"
 	clientConfig "github.com/nymtech/nym-mixnet/client/config"
-	"github.com/nymtech/nym-mixnet/config"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -26,15 +23,14 @@ import (
 
 const (
 	refreshClientOption = "refresh the list of clients"
-)
 
-// str to func <- command
-// some local file with mapping of (pubkey, provider) - human readable id
-
-const (
 	// TODO: create new config.toml or include this in existing client config?
 	defaultStoreFile = "chatstore"
 	defaultStoreDir  = "chat-application"
+)
+
+var (
+	ErrNoRecipient =  errors.New("no recipient was chosen")
 )
 
 type ChatClient struct {
@@ -92,7 +88,7 @@ func (c *ChatClient) updateSession(g *gocui.Gui) error {
 }
 
 func (c *ChatClient) showAvailableCommands(g *gocui.Gui) {
-	availableCommandsString := "\n"
+	availableCommandsString := ""
 	for _, cmd := range c.availableCommands {
 		availableCommandsString += cmd.Usage()
 		availableCommandsString += "\n"
@@ -196,6 +192,7 @@ func (c *ChatClient) handleSend(g *gocui.Gui, v *gocui.View) error {
 	v.Rewind()
 	rawMsg := v.Buffer()
 	if strings.HasPrefix(rawMsg, "/") {
+		gui.WriteMessage(rawMsg, "You [cmd]", g)
 		return c.parseCommand(g, rawMsg)
 	}
 
@@ -231,23 +228,24 @@ func (c *ChatClient) initCommands(g *gocui.Gui) {
 	}
 }
 
+
+
 func (c *ChatClient) startNewChatSession(sessionHalt chan struct{}) error {
-	// firstly choose our recipient, then create proper gui
-	// if this command line chat was to be used further down the line,
-	// I would have probably tried to implement the list selection in gocui,
-	// but using two frameworks is just way simpler in this case
-	chosenClientOption := refreshClientOption
-	var clientMapping map[string]config.ClientConfig
-	for chosenClientOption == refreshClientOption {
-		chosenClientOption, clientMapping = c.chooseRecipient()
-		if err := c.mixClient.UpdateNetworkView(); err != nil {
-			return fmt.Errorf("failed to obtain recipient: %v", err)
-		}
+	recipient, err := c.getRecipient()
+	storedAlias := c.tryAliasStore(recipient.PubKey, recipient.Provider.PubKey)
+
+	fullRecipientName := ""
+	if storedAlias == nil || storedAlias.AssignedName == "" {
+		fullRecipientName = base64.URLEncoding.EncodeToString(recipient.PubKey)
+	} else {
+		fullRecipientName = storedAlias.AssignedName
 	}
 
-	recipient := clientMapping[chosenClientOption]
-	storedAlias := c.tryAliasStore(recipient.PubKey, recipient.Provider.PubKey)
-	c.session = types.NewSession(recipient, c.getDisplayName(recipient.PubKey, recipient.Provider.PubKey))
+	c.session = types.NewSession(recipient, fullRecipientName)
+
+	if err != nil {
+		return err
+	}
 
 	g, err := gui.CreateGUI()
 	if err != nil {
@@ -260,24 +258,23 @@ func (c *ChatClient) startNewChatSession(sessionHalt chan struct{}) error {
 	}
 	c.initCommands(g)
 
-	b64Key := base64.URLEncoding.EncodeToString(c.mixClient.GetPublicKey().Bytes())
-	gui.WriteNotice(fmt.Sprintf("Your public key is: %s Share it off channel with anyone you wish to communicate with.\n",
-		b64Key,
-	), g, "Reminder")
+	// initial notices
+	g.Update(func(g *gocui.Gui) error {
+		b64Key := base64.URLEncoding.EncodeToString(c.mixClient.GetPublicKey().Bytes())
+		gui.WriteNotice(fmt.Sprintf("Your public key is: %s Share it off channel with anyone you wish to communicate with.\n",
+			b64Key,
+		), g, "Reminder")
 
-	fullRecipientName := ""
-	if storedAlias == nil {
-		fullRecipientName = base64.URLEncoding.EncodeToString(recipient.PubKey)
-	} else {
-		fullRecipientName = storedAlias.String()
-	}
-	gui.WriteNotice(fmt.Sprintf("You're currently sending messages to: %s\n",
-		fullRecipientName,
-	), g, "Reminder")
+		gui.WriteNotice(fmt.Sprintf("You're currently sending messages to: %s\n",
+			fullRecipientName,
+		), g, "Reminder")
+		c.showAvailableCommands(g)
+
+		return c.updateSession(g)
+	})
 
 	go c.pollForMessages(g, sessionHalt)
 
-	c.showAvailableCommands(g)
 	if err := g.MainLoop(); err != nil && err != gocui.ErrQuit {
 		return err
 	}
@@ -294,6 +291,11 @@ func (c *ChatClient) Run() error {
 	for exitErr == nil {
 		sessionHalt := make(chan struct{})
 		exitErr = c.startNewChatSession(sessionHalt)
+	}
+
+	if exitErr == ErrNoRecipient {
+		c.Shutdown()
+		return nil
 	}
 	return exitErr
 }
@@ -315,49 +317,4 @@ func (c *ChatClient) halt() {
 	c.mixClient.Shutdown()
 
 	close(c.haltedCh)
-}
-
-func (c *ChatClient) toChoosable(client config.ClientConfig) string {
-	b64Key := base64.URLEncoding.EncodeToString(client.PubKey)
-	b64ProviderKey := base64.URLEncoding.EncodeToString(client.Provider.PubKey)
-
-	aliasedName := "<no alias>"
-	possibleAlias := c.tryAliasStore(client.PubKey, client.Provider.PubKey)
-	if possibleAlias != nil && possibleAlias.AssignedName != "" {
-		aliasedName = possibleAlias.AssignedName
-	}
-
-	return fmt.Sprintf("%s- (Pubkey) %s\t@[Provider] %s", aliasedName, b64Key, b64ProviderKey)
-}
-
-// TODO: incorperate aliases here
-func (c *ChatClient) makeChoosables(recipients []config.ClientConfig) (map[string]config.ClientConfig, []string) {
-	choosableRecipients := make(map[string]config.ClientConfig)
-	options := make([]string, len(recipients)+1)
-	for i, recipient := range recipients {
-		choosableRecipient := c.toChoosable(recipient)
-		options[i] = choosableRecipient
-		choosableRecipients[choosableRecipient] = recipient // basically a mapping from the string back to original struct
-	}
-
-	options[len(recipients)] = refreshClientOption
-	return choosableRecipients, options
-}
-
-func (c *ChatClient) chooseRecipient() (string, map[string]config.ClientConfig) {
-	choosableRecipients, choosableOptions := c.makeChoosables(c.mixClient.Network.Clients)
-
-	var chosenClientOption string
-	prompt := &survey.Select{
-		Message: "Choose another client to communicate with:",
-		Options: choosableOptions,
-	}
-	if err := survey.AskOne(prompt, &chosenClientOption, nil); err == terminal.InterruptErr {
-		// we got an interrupt so we're killing whole client
-		//c.log.Warningf("Received an interrupt - stopping entire client")
-		c.Shutdown()
-		return "", nil
-	}
-	// do not return actual client config as the chosen option might be "refresh"
-	return chosenClientOption, choosableRecipients
 }
