@@ -15,7 +15,7 @@
 package main
 
 import (
-	cmd "github.com/nymtech/demo-mixnet-chat-client/cmd/chat-client/commands"
+cmd "github.com/nymtech/demo-mixnet-chat-client/cmd/chat-client/commands"
 	"github.com/tav/golly/optparse"
 )
 

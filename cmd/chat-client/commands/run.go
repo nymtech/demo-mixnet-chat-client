@@ -67,8 +67,8 @@ func RunCmd(args []string, usage string) {
 		panic(err)
 	}
 
-	if err := chatClient.Start(); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to spawn client instance: %v\n", err)
+	if err := chatClient.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to run client instance: %v\n", err)
 		os.Exit(-1)
 	}
 
