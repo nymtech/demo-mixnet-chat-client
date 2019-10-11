@@ -30,7 +30,7 @@ const (
 )
 
 var (
-	ErrNoRecipient =  errors.New("no recipient was chosen")
+	ErrNoRecipient = errors.New("no recipient was chosen")
 )
 
 type ChatClient struct {
@@ -107,15 +107,18 @@ func (c *ChatClient) parseCommand(g *gocui.Gui, cmd string) error {
 	mainCmd := args[0]
 	for _, command := range c.availableCommands {
 		if command.Name() == mainCmd {
-			err := command.Handle(args)
+			handleErr := command.Handle(args)
 			if err := c.updateSession(g); err != nil {
 				return err
 			}
-			return err
+			if handleErr != nil {
+				break // if we failed to handle command - just break the loop, dont return error
+			}
+			return nil
 		}
 	}
 
-	gui.WriteNotice(fmt.Sprintf("Command: %v does not exist\n", mainCmd), g, "error")
+	gui.WriteNotice(fmt.Sprintf("Command: '%s' does not exist\n", strings.Join(args, " ")), g, "error")
 	c.showAvailableCommands(g)
 	return nil
 }
@@ -185,7 +188,7 @@ func (c *ChatClient) handleSend(g *gocui.Gui, v *gocui.View) error {
 	}
 	defer func() {
 		if err := c.resetView(v); err != nil {
-			// log...
+			// log.../
 		}
 	}()
 
@@ -205,8 +208,11 @@ func (c *ChatClient) handleSend(g *gocui.Gui, v *gocui.View) error {
 		gui.WriteNotice("Could not send message", g, "ERROR")
 	}
 
-	// todo: parse our message before writing it to view (like add prefix of "you", etc) + do some validation
+
 	msg := rawMsg
+	if !strings.HasSuffix(msg, "\n") {
+		msg += "\n"
+	}
 
 	gui.WriteMessage(msg, "You", g)
 
@@ -227,8 +233,6 @@ func (c *ChatClient) initCommands(g *gocui.Gui) {
 		alias.AliasCommand(g, c.chatStore, c.session),
 	}
 }
-
-
 
 func (c *ChatClient) startNewChatSession(sessionHalt chan struct{}) error {
 	recipient, err := c.getRecipient()
