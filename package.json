@@ -1,0 +1,35 @@
+{
+  "name": "mixnet-electron-client",
+  "version": "0.0.1",
+  "description": "",
+  "scripts": {
+    "prestart": "npm run build",
+    "build": "webpack --mode development --config webpack.config.js",
+    "start": "electron ./dist/main.js"
+  },
+  "repository": "https://github.com/nymtech/demo-mixnet-chat-client",
+  "author": "Nym",
+  "license": "Apache2.0",
+  "devDependencies": {
+    "@babel/core": "^7.6.4",
+    "@babel/preset-env": "^7.6.3",
+    "@babel/preset-typescript": "^7.6.0",
+    "add": "^2.0.6",
+    "babel-core": "^6.26.3",
+    "babel-loader": "^8.0.6",
+    "babel-preset-env": "^1.7.0",
+    "babel-preset-es2015-node": "^6.1.1",
+    "babel-preset-react": "^6.24.1",
+    "electron": "^6.0.12",
+    "html-webpack-plugin": "^3.2.0",
+    "standard": "^14.3.1",
+    "standard-loader": "^7.0.0",
+    "ts-loader": "^6.2.0",
+    "tslint": "^5.20.0",
+    "tslint-config-standard": "^8.0.1",
+    "tslint-loader": "^3.5.4",
+    "typescript": "^3.6.4",
+    "webpack": "^4.41.1",
+    "webpack-cli": "^3.3.9"
+  }
+}
