@@ -102,6 +102,31 @@ func WriteNotice(content string, g *gocui.Gui, noticePrefix ...string) {
 	})
 }
 
+func WriteInfo(content string, g *gocui.Gui, infoPrefix ...string) {
+	g.Update(func(gui *gocui.Gui) error {
+		messagesView, err := g.View(layout.MessagesViewName)
+		if err != nil {
+			return err
+		}
+
+		infoText := ""
+		if len(infoPrefix) == 1 {
+			infoText = infoPrefix[0]
+		}
+		formattedMessage := fmt.Sprintf("\x1b[%dm%s: %s\x1b[0m",
+			logger.ColorWhite,
+			infoText,
+			content,
+		)
+
+		if _, err := messagesView.Write([]byte(formattedMessage)); err != nil {
+			return err
+		}
+
+		return nil
+	})
+}
+
 func CreateGUI() (*gocui.Gui, error) {
 	g, err := gocui.NewGui(gocui.OutputNormal)
 	//g, err := gocui.NewGui(gocui.Output256)
