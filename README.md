@@ -52,7 +52,7 @@ When started in a console, this chat client connects to the Nym directory, and r
 
 Once it knows what mixnet nodes exist, the client uses the IP addresses and public keys of Nym mixnet nodes to generate per-packet shared keys for doing [Sphinx](https://cypherpunks.ca/~iang/pubs/Sphinx_Oakland09.pdf) packet encryption. The client immediately begins encrypting dummy traffic, sending loop cover traffic through the mixnet. Loop traffic then loops back to the client, providing cover traffic for both sending and receiving. 
 
-When you type your message into the chat console and hit <enter>, the chat client sends your real message instead of a loop cover packet.
+When you type your message into the chat console and hit "enter", the chat client sends your real message instead of a loop cover packet.
 
 ## Viewing network traffic
 
