@@ -38,5 +38,5 @@ func main() {
 		"run":  "Run a persistent demo-chat client process",
 		"init": "Initialise a base Loopix client",
 	}
-	optparse.Commands("demo-mixnet-chat-client", "0.0.1", cmds, info, logo)
+	optparse.Commands("demo-mixnet-chat-client", "0.0.2", cmds, info, logo)
 }
