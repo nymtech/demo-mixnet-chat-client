@@ -15,7 +15,8 @@
 package main
 
 import (
-cmd "github.com/nymtech/demo-mixnet-chat-client/cmd/chat-client/commands"
+	cmd "github.com/nymtech/demo-mixnet-chat-client/cmd/chat-client/commands"
+	loopix_cmd "github.com/nymtech/nym-mixnet/cmd/loopix-client/commands"
 	"github.com/tav/golly/optparse"
 )
 
@@ -30,9 +31,11 @@ func main() {
 		  `
 	cmds := map[string]func([]string, string){
 		"run":  cmd.RunCmd,
+		"init": loopix_cmd.InitCmd,
 	}
 	info := map[string]string{
-		"run": "Run a persistent demo-chat client process",
+		"run":  "Run a persistent demo-chat client process",
+		"init": "Initialise a base Loopix client",
 	}
 	optparse.Commands("demo-mixnet-chat-client", "0.0.1", cmds, info, logo)
 }
