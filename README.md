@@ -60,7 +60,7 @@ You can view traffic moving across the mixnet by looking at https://dashboard.ny
 
 On the right hand side, you can see packets sent and received in a 1-second period:
 
-![dashboard](assets/dashboard.gif)
+![dashboard](assets/dashboard.png)
 
 
 
