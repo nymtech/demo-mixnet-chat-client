@@ -15,3 +15,5 @@ cmd/chat-client/chat-client
 
 .idea
 .vscode
+
+build
