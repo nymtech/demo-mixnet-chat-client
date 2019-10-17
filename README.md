@@ -42,7 +42,13 @@ When you've got both clients running, selecting keys and a simple chat session w
 
 ![conversation](assets/conversation.gif)
 
-Start typing Bob's key (written across the top of his terminal in yellow text) for auto-completion, or use the up and down arrow's to find the Bob client's public key. Then do the same for Alice. You can type `/alias add Bob` and `/alias add Alice` in each Alice and Bob's chat windows, respectively, to provide a slightly nicer chat identifier. 
+In Alice's console, start typing Bob's public key (written across the top of his terminal in yellow text) to select it using auto-completion, or use the up and down arrows. 
+
+Then in Bob's console, do the same for Alice. 
+
+Once you have each others' public keys selected, you can chat back and forth. Traffic is sent through the mixnet, and briefly stored on a packet storage node (which holds traffic for offline clients). The chat client then retrieves packets and displays messages. 
+
+You can type `/alias add Bob` and `/alias add Alice` in each Alice and Bob's chat windows, respectively, to provide a slightly nicer chat identifier. 
 
 Although the application looks simple, there's actually quite a bit going on.
 
