@@ -1,6 +1,6 @@
-html {
+/* html {
     overflow: hidden;
-}
+} */
 
 body {
     overflow: hidden;
@@ -10,6 +10,19 @@ body {
     height: 100%;
     background: gray;
 }
+
+#noticeDiv {
+    margin: 10pt;
+    text-align: center;
+}
+
+.centeredDiv {
+    text-align: center;
+}
+
+
+
+
 
 #log {
     background: white;
@@ -35,8 +48,4 @@ body {
     left: 0px;
     width: 100%;
     overflow: hidden;
-}
-
-h1 {
-    color: brown;
 }

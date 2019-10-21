@@ -1,10 +1,37 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Command Example</title>
+	<script>
+		window.nodeRequire = require;
+		delete window.require;
+		delete window.exports;
+		delete window.module;
+	</script>
+	<script src="jquery-3.4.1.min.js"></script>
+	<title>Chat Example</title>
 </head>
 <body>
-<div id="log"></div>
+	<div id="log">
+		<div id="noticeDiv">
+		
+		</div>
+
+		<div id="messages">
+			<div class="ui list" id="messagesList">
+		
+
+
+
+			</div>
+		</div>
+		
+		<button class="ui primary button" id="closeWS">close</button>
+		<button class="ui primary button" id="sendMsg">send</button>
+
+	</div>
+
+
+<!-- <div id="log"></div>
 <form id="form">
 	<input type="button" id = "fetchBtn", value="Pull Messages"/>
 	<input type="submit" value="Send"/>
@@ -12,6 +39,7 @@
 	Send to: <select name="recipientSelect" id = "recipientSelect">
 		<option value ="refresh">Refresh</option>
 	</select>
-</form>
-</body>
+</form> -->
+
+</body> 
 </html>
