@@ -1,4 +1,8 @@
 import "semantic-ui-css/semantic.min.css"; // I don't even know... without it the LOCAL FILES would not properly get loaded
+var exec = nodeRequire('child_process').exec
+
+const fixPath = nodeRequire('fix-path');
+fixPath();
 
 // import "semantic-ui";
 // const $: JQueryStatic = (window as any)["jQuery"];
@@ -9,47 +13,31 @@ const fetchMsg = JSON.stringify({
 	fetch: {},
 });
 
-// function attachHandlers() {
-//   let msg = document.getElementById("msg");
-//   let log = document.getElementById("log");
-//   let form = document.getElementById("form");
+const getRecipientsMsg = JSON.stringify({
+	clients: {},
+});
 
 
+// doesn't have any fancy signatures, etc because I WON'T do elliptic crypto in js unless
+// absolutely neccessary
+interface ElectronChatMessage {
+	content: string;
+	senderPublicKey: string;
+	senderProviderPublicKey: string;
+}
 
-// document.getElementById("form").onsubmit = () => {
-// 	if (!conn) {
-// 		return false;
-// 	}
-// 	if (!msg.value) {
-// 		return false;
-// 	}
-// 	conn.send(msg.value);
-// 	msg.value = "";
-// 	return false;
-// };
+interface ClientData {
+	id: string;
+	pubKey: string;
+	provider: {
+		id: string;
+		host: string;
+		port: string;
+		pubKey: string;
+	};
+}
 
-
-// document.getElementById("fetchBtn").onclick = () => {
-// 	let recipientSelector = document.getElementById("recipientSelect");
-// 	let chosenRecipient = recipientSelector.options[recipientSelector.selectedIndex].value;
-
-
-// 	let fetchMsg = JSON.stringify({
-// 		"fetch": {}
-// 	});
-// 	conn.send(fetchMsg)
-// };
-
-
-// function appendLog(item) {
-// 	let doScroll = log.scrollTop > log.scrollHeight - log.clientHeight - 1;
-// 	log.appendChild(item);
-// 	if (doScroll) {
-// 		log.scrollTop = log.scrollHeight - log.clientHeight;
-// 	}
-// }
-
-
+// 'chat2'
 const hardcodedRecipient = {
 		"recipient": {
 		"id": "1I1XFLNq9fIP7gDcmJZNH6GtCk5r9-wb3Ay_fZa9fnI=",
@@ -63,21 +51,23 @@ const hardcodedRecipient = {
 	}
 }
 
+// OUR KEY (well, if I run it locally with '--id chat1')
 const senderKey = "eqjn-P2hFQpowbVPfAwtN3wDVfSKAhDrjgQvGyoa10Y="
 
 
 class SocketConnection {
 	private conn: WebSocket;
 	private ticker: number;
+	private clients: ClientData[];
 	constructor() {
 		const conn = new WebSocket(`ws://${localhost}:${port}/mix`);
 		conn.onclose = this.onSocketClose;
 		conn.onmessage = this.onSocketMessage;
 		conn.onerror = (ev: Event) => console.log("Socket error: ", ev);
-		conn.onopen = () => console.log("Socket was opened!");
+		conn.onopen = this.getClients.bind(this);
 
+		this.clients = [];
 		this.conn = conn;
-
 		this.ticker = window.setInterval(this.fetchMessages.bind(this), 1000);
 	}
 
@@ -86,14 +76,36 @@ class SocketConnection {
 		window.clearInterval(this.ticker);
 	}
 
-	public sendMessage(message: string, recipient = hardcodedRecipient.recipient) {
+	public getClients() {
+		console.log("getting list of available clients...");
+		this.conn.send(getRecipientsMsg);
+	}
+
+	public sendMessage(message: string) {
+		const selectedRecipientIdx = $("#recipientSelector").dropdown("get value");
+		if (selectedRecipientIdx.length === 0) {
+			return;
+		}
+
+		const selectedRecipient = this.clients[selectedRecipientIdx];
+
+		// once recipient is selected, don't allow changing it
+		if (!$("#recipientSelector").hasClass("disabled")) {
+			$("#recipientSelector").addClass("disabled");
+			// also update the sender divider here
+			$("#senderDivider").html("Sending to " + this.formatDisplayedClient(selectedRecipient));
+		}
+
+		console.log(selectedRecipient);
+
 		const sendMsg = JSON.stringify({
 				send: {
 					message: btoa(message),
-					recipient,
+					recipient: selectedRecipient,
 				},
 		});
 		this.conn.send(sendMsg);
+		createChatMessage("you", message, true);
 	}
 
 	private onSocketClose(ev: CloseEvent) {
@@ -102,7 +114,7 @@ class SocketConnection {
 		const innerHeader = $("<div>", {
 			class: "sub header",
 			id: "wsclosedsub",
-		}).text(`(code: ${ev.code}) - ${ev.reason || "unknown"}`);
+		}).text(`(code: ${ev.code}) - ${ev.reason || "no reason provided"}`);
 
 		const contentDiv = $("<div>", {
 			class: "content",
@@ -122,20 +134,67 @@ class SocketConnection {
 		$("#noticeDiv").append(closedHeader);
 	}
 
-	private onSocketMessage(ev: MessageEvent) {
+	private handleFetchResponse(fetchData: any) {
+		const messages = fetchData.fetch.messages;
 
-		// conn.onmessage = (evt: MessageEvent) => {
-		// 	let res = JSON.parse(evt.data)
+		for (const msg of messages) {
+			// TODO: js-chat message formatting + parsing
+			const chatMessage: ElectronChatMessage = {
+				content: "",
+				senderProviderPublicKey: "bbbbbbbbbbbbbbbbbbbbb",
+				senderPublicKey: "aaaaaaaaaaaaaaaaaaaaaaaa",
+			};
+			// TODO: later just do `const chatMessage = msg as ElectronChatMessage;`
 
-		// 	// THIS IS ONLY FOR FETCH
-		// 	for (msg in res["messages"]) {
-		// 		let item = document.createElement("div");
-		// 		item.innerText = "Received: " + msg;
-		// 		appendLog(item)
-		// 	}
-		// 	};
+			// TODO: do we need to decode it?
+			chatMessage.content = atob(msg);
+			createChatMessage(
+				`??? - ${chatMessage.senderPublicKey.substring(0,8)}...@${chatMessage.senderProviderPublicKey.substring(0,8)}...`,
+				chatMessage.content,
+			);
+		}
+	}
 
-		console.log("received message", ev.data);
+	private formatDisplayedClient(client: ClientData): string {
+		return "??? - " + client.id.substring(0, 8) + "...";
+	}
+
+	private handleClientsResponse(clientsData: any) {
+		if (!$("#recipientSelector").hasClass("disabled")) {
+			$("#recipientSelector").removeClass("disabled");
+		}
+
+		const availableClients = clientsData.clients.clients as ClientData[];
+		// update our current list
+		this.clients = availableClients;
+
+		const valuesArray = availableClients.map((client, idx) => {
+			return {name: this.formatDisplayedClient(client), value: idx};
+		});
+
+		$("#recipientSelector").dropdown({
+			placeholder: "Choose recipient",
+			fullTextSearch: true,
+			values: valuesArray, // don't mind the errors, it's just typescript not really liking jquery
+		});
+	}
+
+	// had to define it as an arrow function otherwise I couldn't call this.handle...
+	private onSocketMessage = (ev: MessageEvent): void => {
+
+		// we can either receive list of clients or actual message
+		const receivedData = JSON.parse(ev.data);
+
+		if (receivedData.hasOwnProperty("fetch")) {
+			return this.handleFetchResponse(receivedData);
+		} else if (receivedData.hasOwnProperty("clients")) {
+			return this.handleClientsResponse(receivedData);
+		} else if (receivedData.hasOwnProperty("send")) {
+			console.log("received send confirmation");
+		}
+
+		console.log("Received unknown response!");
+		console.log(receivedData);
 	}
 
 	private fetchMessages() {
@@ -144,31 +203,89 @@ class SocketConnection {
 	}
 
 
+
 }
 
+function createChatMessage(senderID: string, content: string, isReply: boolean = false) {
+	const textDiv = $("<div>", {
+		class: "text",
+	}).text(content);
 
+	// TODO: we really should get it from message itself rather than use local time, but oh well
+	const dateDiv = $("<div>", {
+		class: "date",
+	}).text(new Date().toLocaleTimeString());
+
+	const metadataDiv = $("<div>", {
+		class: "metadata",
+	}).append(dateDiv);
+
+	const authorAnchor = $("<a>", {
+		class: "author",
+	}).text(senderID);
+
+	const contentDiv = $("<div>", {
+		class: "content",
+	}).append(authorAnchor, metadataDiv, textDiv);
+
+	const avatarAnchor = $("<a>", {
+		class: "avatar",
+	}).html('<img src="assets/avatar.png">');
+
+	const commentDiv = $("<div>", {
+		class: "comment",
+	}).append(avatarAnchor, contentDiv);
+
+	let chatMessageDiv: JQuery<HTMLElement>;
+	if (isReply) {
+		chatMessageDiv = $("<div>", {
+			class: "chatMessage reply",
+		});
+	} else {
+		chatMessageDiv = $("<div>", {
+			class: "chatMessage incoming",
+		});
+	}
+	chatMessageDiv.append(commentDiv);
+
+	$("#messagesList").append(chatMessageDiv);
+}
+
+function handleSendAction(conn: SocketConnection) {
+	const inputElement = $("#msgInput");
+	const messageInput = inputElement.val() as string;
+	if (messageInput.length === 0) {
+		return; // don't do anything if there's nothing to send
+	}
+
+	conn.sendMessage(messageInput);
+
+	// finally clear input box
+	inputElement.val("");
+}
 
 function main() {
 	const conn = new SocketConnection();
 
-	// t = document.getElementById("connectWS")
-	// t.onclick(() => console.log("clicked"))
-	// $.ge
 	$("#closeWS").click(() => {
-		conn.closeConnection()
+		conn.closeConnection();
 	});
-
 	$("#sendMsg").click(() => {
-
-
 		conn.sendMessage("foomp");
-
 	});
-
-
-	// makeSocketConnection()
-	// document.getElementById("test").innerText = "foo"
-	// makeSocketConnection()
+	$("#getClients").click(() => {
+		conn.getClients();
+	});
+	$("#sendBtn").click(() => {
+		handleSendAction(conn);
+	});
+	$("#msgInput").on("keydown", (ev: JQuery.KeyDownEvent) => {
+		if (ev.keyCode === 13) {
+			handleSendAction(conn);
+		}
+	});
 }
 
-main();
+$(document).ready(() => main());
+
+

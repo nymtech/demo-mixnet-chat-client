@@ -1,4 +1,5 @@
 import { app, BrowserWindow } from "electron";
+const path = require("path");
 
 let mainWindow: Electron.BrowserWindow;
 
@@ -12,8 +13,10 @@ function onReady() {
 		width: 1200,
 	});
 
+	
 	// and load the index.html of the app.
-	mainWindow.loadFile("index.html");
+	mainWindow.loadFile(path.resolve('dist/index.html'));
+	// mainWindow.loadFile("index.html");
 
 	// Open the DevTools.
 	mainWindow.webContents.openDevTools();

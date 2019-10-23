@@ -1,17 +1,46 @@
 {
   "name": "mixnet-electron-client",
   "version": "0.0.1",
+  "author": {
+    "name": "Nym",
+    "email": "andrew@nymtech.net",
+    "url": "https://www.nymtech.net"
+  },
   "description": "",
   "scripts": {
     "prestart": "npm run build",
     "build": "webpack --mode development --config webpack.config.js",
-    "start": "electron ./dist/main.js"
+    "start": "electron ./dist/main.js",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "main": "./dist/main.js",
+  "build": {
+    "extends": null,
+    "copyright": "Copyright © 2019 ${author}",
+    "appId": "mixnetElectronChatClient",
+    "mac": {
+      "category": "public.app-category.social-networking"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ]
+    },
+    "files": [
+      "dist/*",
+      "dist/**/*"
+    ],
+    "directories": {
+      "output": "build"
+    }
   },
   "repository": "https://github.com/nymtech/demo-mixnet-chat-client",
-  "author": "Nym",
   "license": "Apache2.0",
   "devDependencies": {
     "@babel/core": "^7.6.4",
+    "@babel/plugin-proposal-class-properties": "^7.5.5",
     "@babel/preset-env": "^7.6.3",
     "@babel/preset-typescript": "^7.6.0",
     "add": "^2.0.6",
@@ -20,7 +49,10 @@
     "copy-webpack-plugin": "^5.0.4",
     "css-loader": "^3.2.0",
     "electron": "^6.0.12",
+    "electron-builder": "^21.2.0",
     "file-loader": "^4.2.0",
+    "google-closure-library": "^20190929.0.0",
+    "google-protobuf": "^3.10.0",
     "html-webpack-plugin": "^3.2.0",
     "html-webpack-tags-plugin": "^2.0.17",
     "mini-css-extract-plugin": "^0.8.0",
@@ -38,7 +70,9 @@
     "webpack-cli": "^3.3.9"
   },
   "dependencies": {
+    "@types/google-protobuf": "^3.7.2",
     "@types/semantic-ui": "^2.2.7",
+    "fix-path": "^2.1.0",
     "semantic-ui-css": "^2.4.1"
   }
 }
