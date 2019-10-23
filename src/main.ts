@@ -1,9 +1,37 @@
 import { app, BrowserWindow } from "electron";
 const path = require("path");
+const execFile = require('child_process').execFile
+const fixPath = require('fix-path');
+fixPath();
 
 let mainWindow: Electron.BrowserWindow;
 
 function onReady() {
+	if (process.argv.length !== 4) {
+		throw new Error("Insufficient number of arguments provided")
+	}
+	const loopixID = process.argv[2];
+	const loopixPort = process.argv[3];
+
+	
+	// start loopix client
+	// const loopixClient = execFile(path.resolve("dist/loopix-client"), ["run"]);
+
+
+	const loopixClient = execFile(path.resolve("dist/loopix-client"),
+		["socket", "--id", loopixID, "--socket", "websocket", "--port", loopixPort],
+		(error, stdout, stderr) => {
+		if (error) {
+			console.error("stderr", stderr);
+			throw error;
+		}
+		console.log('stdout', stdout);
+	});
+
+	loopixClient.on("exit", (code: any) => {
+		throw new Error(`Exit with code: ${code}`);
+	});
+
 	// Create the browser window.
 	mainWindow = new BrowserWindow({
 		height: 600,
@@ -15,13 +43,16 @@ function onReady() {
 
 	
 	// and load the index.html of the app.
-	mainWindow.loadFile(path.resolve('dist/index.html'));
+	mainWindow.loadFile(path.resolve("dist/index.html"));
 	// mainWindow.loadFile("index.html");
 
 	// Open the DevTools.
 	mainWindow.webContents.openDevTools();
 
-	mainWindow.on("close", app.quit);
+	mainWindow.on("close", () => {
+		loopixClient.kill("SIGINT");
+		app.quit();
+	});
 }
 
 // This method will be called when Electron has finished

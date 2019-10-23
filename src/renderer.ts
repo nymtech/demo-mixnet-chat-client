@@ -1,8 +1,4 @@
 import "semantic-ui-css/semantic.min.css"; // I don't even know... without it the LOCAL FILES would not properly get loaded
-var exec = nodeRequire('child_process').exec
-
-const fixPath = nodeRequire('fix-path');
-fixPath();
 
 // import "semantic-ui";
 // const $: JQueryStatic = (window as any)["jQuery"];
@@ -16,6 +12,11 @@ const fetchMsg = JSON.stringify({
 const getRecipientsMsg = JSON.stringify({
 	clients: {},
 });
+
+const getDetailsMsg = JSON.stringify({
+	details: {},
+});
+
 
 
 // doesn't have any fancy signatures, etc because I WON'T do elliptic crypto in js unless
@@ -37,7 +38,7 @@ interface ClientData {
 	};
 }
 
-// 'chat2'
+// 'chat1'
 const hardcodedRecipient = {
 		"recipient": {
 		"id": "1I1XFLNq9fIP7gDcmJZNH6GtCk5r9-wb3Ay_fZa9fnI=",
@@ -51,7 +52,7 @@ const hardcodedRecipient = {
 	}
 }
 
-// OUR KEY (well, if I run it locally with '--id chat1')
+// OUR KEY (well, if I run it locally with '--id chat2')
 const senderKey = "eqjn-P2hFQpowbVPfAwtN3wDVfSKAhDrjgQvGyoa10Y="
 
 
@@ -64,7 +65,7 @@ class SocketConnection {
 		conn.onclose = this.onSocketClose;
 		conn.onmessage = this.onSocketMessage;
 		conn.onerror = (ev: Event) => console.log("Socket error: ", ev);
-		conn.onopen = this.getClients.bind(this);
+		conn.onopen = this.onSocketOpen.bind(this);
 
 		this.clients = [];
 		this.conn = conn;
@@ -106,6 +107,11 @@ class SocketConnection {
 		});
 		this.conn.send(sendMsg);
 		createChatMessage("you", message, true);
+	}
+
+	private onSocketOpen() {
+		this.getClients();
+		this.conn.send(getDetailsMsg);
 	}
 
 	private onSocketClose(ev: CloseEvent) {
@@ -160,7 +166,7 @@ class SocketConnection {
 	}
 
 	private handleClientsResponse(clientsData: any) {
-		if (!$("#recipientSelector").hasClass("disabled")) {
+		if ($("#recipientSelector").hasClass("disabled")) {
 			$("#recipientSelector").removeClass("disabled");
 		}
 
@@ -179,6 +185,12 @@ class SocketConnection {
 		});
 	}
 
+	private displayOwnDetails(data: any) {
+		const ownDetails = data.details.details as ClientData;
+		let detailsString = "Your public key is: " + ownDetails.pubKey;
+		detailsString += "\n Your provider's public key is: " + ownDetails.provider.pubKey;
+		createChatMessage("SYSTEM INFO", detailsString, true);
+	}
 	// had to define it as an arrow function otherwise I couldn't call this.handle...
 	private onSocketMessage = (ev: MessageEvent): void => {
 
@@ -189,6 +201,8 @@ class SocketConnection {
 			return this.handleFetchResponse(receivedData);
 		} else if (receivedData.hasOwnProperty("clients")) {
 			return this.handleClientsResponse(receivedData);
+		} else if (receivedData.hasOwnProperty("details")) {
+			return this.displayOwnDetails(receivedData);
 		} else if (receivedData.hasOwnProperty("send")) {
 			console.log("received send confirmation");
 		}

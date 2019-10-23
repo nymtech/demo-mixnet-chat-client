@@ -8,11 +8,12 @@
   },
   "description": "",
   "scripts": {
-    "prestart": "npm run build",
-    "build": "webpack --mode development --config webpack.config.js",
-    "start": "electron ./dist/main.js",
+    "prestart": "yarn build",
+    "build": "webpack --mode development --config webpack.config.js && yarn prepare-loopix",
+    "start": "electron ./dist/main.js electronChat1 9000",
     "pack": "electron-builder --dir",
-    "dist": "electron-builder"
+    "dist": "electron-builder",
+    "prepare-loopix": "cwd=$(pwd) && cd $HOME/workspace/nym-related/nym-mixnet/cmd/loopix-client && go build -o $cwd/dist/loopix-client"
   },
   "main": "./dist/main.js",
   "build": {
