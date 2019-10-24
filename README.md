@@ -13,3 +13,10 @@ so that the path points to the sourcecode of nym-mixnet loopix-client <https://g
 Furthermore, when running the build binary, it requires two arguments: 1. name of the loopix-client and 2. port to run mixclient on.
 
 For the first one, you need to run `init` command on the previously mentioned `loopix-client`. The port can be any valid port number.
+
+To build:
+
+```
+npm install
+yarn dist
+```
