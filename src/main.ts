@@ -1,21 +1,29 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 const path = require("path");
-const execFile = require('child_process').execFile
-const fixPath = require('fix-path');
+const execFile = require("child_process").execFile
+const fixPath = require("fix-path");
+const getPort = require("get-port");
 fixPath();
 
 let mainWindow: Electron.BrowserWindow;
 
-function onReady() {
+async function onReady() {
 	if (app.isPackaged) {
 		process.argv.unshift(""); // temp workaround
 	}
-	if (process.argv.length !== 4) {
+	if (process.argv.length < 3) {
 		throw new Error("Insufficient number of arguments provided");
 	}
 	const loopixID = process.argv[2];
-	const loopixPort = process.argv[3];
+	let loopixPort: string;
+	if (process.argv.length > 3) {
+		loopixPort = process.argv[3];
+	} else {
+		loopixPort = await getPort();
+	}
 
+	console.log(`Chosen port: ${loopixPort}`);
+	
 	const loopixClient = execFile(path.resolve("dist/loopix-client"),
 		["socket", "--id", loopixID, "--socket", "websocket", "--port", loopixPort],
 		(error: any, stdout: any, stderr: any) => {
