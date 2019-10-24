@@ -1,20 +1,54 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 const path = require("path");
-const execFile = require("child_process").execFile
+const execFile = require("child_process").execFile;
+const exec = require("child_process").exec;
+
+const execFileSync = require("child_process").execFileSync;
 const fixPath = require("fix-path");
 const getPort = require("get-port");
+const fs = require("fs");
 fixPath();
 
 let mainWindow: Electron.BrowserWindow;
+
+function makeID(length: number): string {
+	if (length < 0) {
+		return "";
+	}
+	let result = "";
+	const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+	for ( let i = 0; i < length; i++ ) {
+	   result += chars.charAt(Math.floor(Math.random() * chars.length));
+	}
+	return result;
+ }
 
 async function onReady() {
 	if (app.isPackaged) {
 		process.argv.unshift(""); // temp workaround
 	}
-	if (process.argv.length < 3) {
-		throw new Error("Insufficient number of arguments provided");
+
+	let wasIDLoaded = false;
+	let loopixID: string;
+	if (process.argv.length > 2) {
+		loopixID = process.argv[2];
+	} else {
+		// see if anything is saved locally
+		try {
+			const data: string | Buffer = fs.readFileSync("savedID.nymchat");
+			if (data.length > 0) {
+				console.log("Loaded ID from the file!");
+				loopixID = data.toString();
+				wasIDLoaded = true;
+			} else {
+				console.log("Generated fresh ID!");
+				loopixID = makeID(16);
+			}
+		} catch (e) {
+			console.log("Generated fresh ID!");
+			loopixID = makeID(16);
+		}
 	}
-	const loopixID = process.argv[2];
 	let loopixPort: string;
 	if (process.argv.length > 3) {
 		loopixPort = process.argv[3];
@@ -22,20 +56,33 @@ async function onReady() {
 		loopixPort = await getPort();
 	}
 
+	console.log(`Chosen loopix client ID: ${loopixID}`);
 	console.log(`Chosen port: ${loopixPort}`);
-	
+
+	if (!wasIDLoaded) {
+		// save the id for future use, if exists, simply overwrite it
+		fs.writeFileSync("savedID.nymchat", loopixID);
+		console.log("Saved the id!");
+
+		const out = execFileSync(path.resolve("dist/loopix-client"), ["init", "--id", loopixID]);
+		console.log(out.toString());
+	}
+
 	const loopixClient = execFile(path.resolve("dist/loopix-client"),
 		["socket", "--id", loopixID, "--socket", "websocket", "--port", loopixPort],
-		(error: any, stdout: any, stderr: any) => {
+		(error: Error, stdout: string | Buffer, stderr: string | Buffer) => {
 		if (error) {
-			console.error("stderr", stderr);
-			throw error;
+			if (error.killed === true) {
+				// we killed it so we can ignore the error
+				console.log("We killed the process");
+			} else {
+				throw error;
+			}
 		}
-		console.log("stdout", stdout);
 	});
 
-	loopixClient.on("exit", (code: any) => {
-		throw new Error(`Exit with code: ${code}`);
+	loopixClient.on("error", (err: Error) => {
+		throw new Error(`Error when handling loopix-client: ${err}`);
 	});
 
 	// listen for port requests from window we're about to spawn
@@ -48,7 +95,7 @@ async function onReady() {
 		height: 1000,
 		webPreferences: {
 			nodeIntegration: true,
-		  },
+		},
 		width: 800,
 	});
 
@@ -62,7 +109,6 @@ async function onReady() {
 	}
 
 	mainWindow.on("close", () => {
-		loopixClient.kill("SIGINT");
 		app.quit();
 	});
 
