@@ -11,8 +11,8 @@
     "prestart": "yarn build",
     "build": "webpack --mode development --config webpack.config.js && yarn prepare-loopix",
     "start": "electron ./dist/main.js electronChat1 9000",
-    "pack": "electron-builder --dir",
-    "dist": "electron-builder",
+    "pack": "yarn build && electron-builder --dir",
+    "dist": "yarn build && electron-builder",
     "prepare-loopix": "cwd=$(pwd) && cd $HOME/workspace/nym-related/nym-mixnet/cmd/loopix-client && go build -o $cwd/dist/loopix-client"
   },
   "main": "./dist/main.js",
@@ -38,7 +38,7 @@
     }
   },
   "repository": "https://github.com/nymtech/demo-mixnet-chat-client",
-  "license": "Apache2.0",
+  "license": "Apache-2.0",
   "devDependencies": {
     "@babel/core": "^7.6.4",
     "@babel/plugin-proposal-class-properties": "^7.5.5",
@@ -73,6 +73,7 @@
   "dependencies": {
     "@types/google-protobuf": "^3.7.2",
     "@types/semantic-ui": "^2.2.7",
+    "base64url": "^3.0.1",
     "fix-path": "^2.1.0",
     "semantic-ui-css": "^2.4.1"
   }

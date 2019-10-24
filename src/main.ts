@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron";
 const path = require("path");
 const execFile = require('child_process').execFile
 const fixPath = require('fix-path');
@@ -7,51 +7,59 @@ fixPath();
 let mainWindow: Electron.BrowserWindow;
 
 function onReady() {
+	if (app.isPackaged) {
+		process.argv.unshift(""); // temp workaround
+	}
 	if (process.argv.length !== 4) {
-		throw new Error("Insufficient number of arguments provided")
+		throw new Error("Insufficient number of arguments provided");
 	}
 	const loopixID = process.argv[2];
 	const loopixPort = process.argv[3];
 
-	
-	// start loopix client
-	// const loopixClient = execFile(path.resolve("dist/loopix-client"), ["run"]);
-
-
 	const loopixClient = execFile(path.resolve("dist/loopix-client"),
 		["socket", "--id", loopixID, "--socket", "websocket", "--port", loopixPort],
-		(error, stdout, stderr) => {
+		(error: any, stdout: any, stderr: any) => {
 		if (error) {
 			console.error("stderr", stderr);
 			throw error;
 		}
-		console.log('stdout', stdout);
+		console.log("stdout", stdout);
 	});
 
 	loopixClient.on("exit", (code: any) => {
 		throw new Error(`Exit with code: ${code}`);
 	});
 
+	// listen for port requests from window we're about to spawn
+	ipcMain.once("port", (event) => {
+		event.returnValue = loopixPort;
+	});
+
 	// Create the browser window.
 	mainWindow = new BrowserWindow({
-		height: 600,
+		height: 1000,
 		webPreferences: {
 			nodeIntegration: true,
 		  },
-		width: 1200,
+		width: 800,
 	});
 
-	
+
 	// and load the index.html of the app.
 	mainWindow.loadFile(path.resolve("dist/index.html"));
-	// mainWindow.loadFile("index.html");
 
 	// Open the DevTools.
-	mainWindow.webContents.openDevTools();
+	if (!app.isPackaged) {
+		mainWindow.webContents.openDevTools();
+	}
 
 	mainWindow.on("close", () => {
 		loopixClient.kill("SIGINT");
 		app.quit();
+	});
+
+	app.on("quit", () => {
+		loopixClient.kill("SIGINT");
 	});
 }
 

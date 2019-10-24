@@ -1,10 +1,11 @@
 import "semantic-ui-css/semantic.min.css"; // I don't even know... without it the LOCAL FILES would not properly get loaded
+const { ipcRenderer } = nodeRequire('electron')
+const base64url = nodeRequire('base64url');
 
 // import "semantic-ui";
 // const $: JQueryStatic = (window as any)["jQuery"];
 
 const localhost: string = document.location.host || "localhost";
-const port: string = "9000";
 const fetchMsg = JSON.stringify({
 	fetch: {},
 });
@@ -38,29 +39,12 @@ interface ClientData {
 	};
 }
 
-// 'chat1'
-const hardcodedRecipient = {
-		"recipient": {
-		"id": "1I1XFLNq9fIP7gDcmJZNH6GtCk5r9-wb3Ay_fZa9fnI=",
-		"pubKey": "1I1XFLNq9fIP7gDcmJZNH6GtCk5r9+wb3Ay/fZa9fnI=",
-		"provider": {
-			"id": "XiVE6xA10xFkAwfIQuBDc_JRXWerL0Pcqi7DipEUeTE=",
-			"host": "3.8.176.11",
-			"port": "1789",
-			"pubKey": "XiVE6xA10xFkAwfIQuBDc/JRXWerL0Pcqi7DipEUeTE="
-		}
-	}
-}
-
-// OUR KEY (well, if I run it locally with '--id chat2')
-const senderKey = "eqjn-P2hFQpowbVPfAwtN3wDVfSKAhDrjgQvGyoa10Y="
-
-
 class SocketConnection {
 	private conn: WebSocket;
 	private ticker: number;
 	private clients: ClientData[];
-	constructor() {
+	private ownDetails: ClientData;
+	constructor(port: string) {
 		const conn = new WebSocket(`ws://${localhost}:${port}/mix`);
 		conn.onclose = this.onSocketClose;
 		conn.onmessage = this.onSocketMessage;
@@ -94,17 +78,24 @@ class SocketConnection {
 		if (!$("#recipientSelector").hasClass("disabled")) {
 			$("#recipientSelector").addClass("disabled");
 			// also update the sender divider here
-			$("#senderDivider").html("Sending to " + this.formatDisplayedClient(selectedRecipient));
+			updateSenderDivider(formatDisplayedClient(selectedRecipient));
 		}
 
 		console.log(selectedRecipient);
 
+		const fullMessage: ElectronChatMessage = {
+			content: message,
+			senderProviderPublicKey: this.ownDetails.provider.pubKey,
+			senderPublicKey: this.ownDetails.pubKey,
+		};
+
 		const sendMsg = JSON.stringify({
 				send: {
-					message: btoa(message),
+					message: btoa(JSON.stringify(fullMessage)),
 					recipient: selectedRecipient,
 				},
 		});
+
 		this.conn.send(sendMsg);
 		createChatMessage("you", message, true);
 	}
@@ -143,26 +134,19 @@ class SocketConnection {
 	private handleFetchResponse(fetchData: any) {
 		const messages = fetchData.fetch.messages;
 
-		for (const msg of messages) {
-			// TODO: js-chat message formatting + parsing
-			const chatMessage: ElectronChatMessage = {
-				content: "",
-				senderProviderPublicKey: "bbbbbbbbbbbbbbbbbbbbb",
-				senderPublicKey: "aaaaaaaaaaaaaaaaaaaaaaaa",
-			};
-			// TODO: later just do `const chatMessage = msg as ElectronChatMessage;`
+		for (const rawMsg of messages) {
+			// TODO: FIXME: for some reason at some point there's an invalid character attached here with ascii code 1...
+			let b64Decoded: string = base64url.decode(rawMsg);
+			if (b64Decoded.charCodeAt(0) < 32) {
+				b64Decoded = b64Decoded.substring(1);
+			}
+			const msg = JSON.parse(b64Decoded) as ElectronChatMessage;
 
-			// TODO: do we need to decode it?
-			chatMessage.content = atob(msg);
 			createChatMessage(
-				`??? - ${chatMessage.senderPublicKey.substring(0,8)}...@${chatMessage.senderProviderPublicKey.substring(0,8)}...`,
-				chatMessage.content,
+				`??? - ${msg.senderPublicKey.substring(0, 8)}... (Provider: ${msg.senderProviderPublicKey.substring(0, 8)}...)`,
+				msg.content,
 			);
 		}
-	}
-
-	private formatDisplayedClient(client: ClientData): string {
-		return "??? - " + client.id.substring(0, 8) + "...";
 	}
 
 	private handleClientsResponse(clientsData: any) {
@@ -175,7 +159,7 @@ class SocketConnection {
 		this.clients = availableClients;
 
 		const valuesArray = availableClients.map((client, idx) => {
-			return {name: this.formatDisplayedClient(client), value: idx};
+			return {name: formatDisplayedClient(client), value: idx};
 		});
 
 		$("#recipientSelector").dropdown({
@@ -185,8 +169,7 @@ class SocketConnection {
 		});
 	}
 
-	private displayOwnDetails(data: any) {
-		const ownDetails = data.details.details as ClientData;
+	private displayOwnDetails(ownDetails: ClientData) {
 		let detailsString = "Your public key is: " + ownDetails.pubKey;
 		detailsString += "\n Your provider's public key is: " + ownDetails.provider.pubKey;
 		createChatMessage("SYSTEM INFO", detailsString, true);
@@ -202,7 +185,14 @@ class SocketConnection {
 		} else if (receivedData.hasOwnProperty("clients")) {
 			return this.handleClientsResponse(receivedData);
 		} else if (receivedData.hasOwnProperty("details")) {
-			return this.displayOwnDetails(receivedData);
+			this.ownDetails = receivedData.details.details;
+			// fix up encoding
+			this.ownDetails.id = base64url.fromBase64(this.ownDetails.id);
+			this.ownDetails.pubKey = base64url.fromBase64(this.ownDetails.pubKey);
+			this.ownDetails.provider.id = base64url.fromBase64(this.ownDetails.provider.id);
+			this.ownDetails.provider.pubKey = base64url.fromBase64(this.ownDetails.provider.pubKey);
+
+			return this.displayOwnDetails(this.ownDetails);
 		} else if (receivedData.hasOwnProperty("send")) {
 			console.log("received send confirmation");
 		}
@@ -215,9 +205,14 @@ class SocketConnection {
 		console.log("checking for new messages...");
 		this.conn.send(fetchMsg);
 	}
+}
 
+function updateSenderDivider(displayedName: string) {
+	$("#senderDivider").html("Sending to " + displayedName);
+}
 
-
+function formatDisplayedClient(client: ClientData): string {
+	return "??? - " + client.id.substring(0, 8) + "...";
 }
 
 function createChatMessage(senderID: string, content: string, isReply: boolean = false) {
@@ -279,13 +274,15 @@ function handleSendAction(conn: SocketConnection) {
 }
 
 function main() {
-	const conn = new SocketConnection();
+	const port: string = ipcRenderer.sendSync("port");
 
+	let conn = new SocketConnection(port);
 	$("#closeWS").click(() => {
 		conn.closeConnection();
 	});
-	$("#sendMsg").click(() => {
-		conn.sendMessage("foomp");
+	$("#remakeWS").click(() => {
+		conn = new SocketConnection(port);
+		$("#noticeDiv").html("");
 	});
 	$("#getClients").click(() => {
 		conn.getClients();
@@ -301,5 +298,3 @@ function main() {
 }
 
 $(document).ready(() => main());
-
-
