@@ -16,3 +16,4 @@
 node_modules
 dist
 build
+cmd/chat-client/chat-client
