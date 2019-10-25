@@ -1,12 +1,12 @@
+import { execFile, execFileSync } from "child_process";
 import { app, BrowserWindow, ipcMain } from "electron";
-const path = require("path");
-const execFile = require("child_process").execFile;
-const exec = require("child_process").exec;
+import * as fs from "fs";
+import * as getPort from "get-port";
+import * as path from "path";
 
-const execFileSync = require("child_process").execFileSync;
+// apparently needed in some cases on macOS:
+// however, doesn't have d.ts definitions so needs to be imported via a require.
 const fixPath = require("fix-path");
-const getPort = require("get-port");
-const fs = require("fs");
 fixPath();
 
 let mainWindow: Electron.BrowserWindow;
@@ -74,7 +74,7 @@ async function onReady() {
 		if (error) {
 			if (error.killed === true) {
 				// we killed it so we can ignore the error
-				console.log("We killed the process");
+				console.log("We killed the loopix-client process ourselves");
 			} else {
 				throw error;
 			}

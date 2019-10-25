@@ -2,8 +2,29 @@ import "semantic-ui-css/semantic.min.css"; // I don't even know... without it th
 const { ipcRenderer } = nodeRequire('electron')
 const base64url = nodeRequire('base64url');
 
-// import "semantic-ui";
-// const $: JQueryStatic = (window as any)["jQuery"];
+// can't use import instead of require/nodeRequire here, as it would be transpiled to 'require'
+// that is not defined on window due to being replaced by 'nodeRequire'.
+// The reason for that was to make jquery work with electron.
+
+
+// tslint:disable-next-line: interface-name
+interface ElectronChatMessage {
+	content: string;
+	senderPublicKey: string;
+	senderProviderPublicKey: string;
+}
+
+// tslint:disable-next-line: interface-name
+interface ClientData {
+	id: string;
+	pubKey: string;
+	provider: {
+		id: string;
+		host: string;
+		port: string;
+		pubKey: string;
+	};
+}
 
 const localhost: string = document.location.host || "localhost";
 const fetchMsg = JSON.stringify({
@@ -19,39 +40,21 @@ const getDetailsMsg = JSON.stringify({
 });
 
 
-
-// doesn't have any fancy signatures, etc because I WON'T do elliptic crypto in js unless
-// absolutely neccessary
-interface ElectronChatMessage {
-	content: string;
-	senderPublicKey: string;
-	senderProviderPublicKey: string;
-}
-
-interface ClientData {
-	id: string;
-	pubKey: string;
-	provider: {
-		id: string;
-		host: string;
-		port: string;
-		pubKey: string;
-	};
-}
-
 class SocketConnection {
 	private conn: WebSocket;
 	private ticker: number;
 	private clients: ClientData[];
 	private ownDetails: ClientData;
-	constructor(port: string) {
+
+	constructor(port: number) {
 		const conn = new WebSocket(`ws://${localhost}:${port}/mix`);
 		conn.onclose = this.onSocketClose;
 		conn.onmessage = this.onSocketMessage;
-		conn.onerror = (ev: Event) => console.log("Socket error: ", ev);
+		conn.onerror = (ev: Event) => console.error("Socket error: ", ev);
 		conn.onopen = this.onSocketOpen.bind(this);
 
 		this.clients = [];
+		this.ownDetails = {} as ClientData;
 		this.conn = conn;
 		this.ticker = window.setInterval(this.fetchMessages.bind(this), 1000);
 	}
@@ -107,6 +110,7 @@ class SocketConnection {
 
 	private onSocketClose(ev: CloseEvent) {
 		console.log("The websocket was closed", ev);
+		// not saying anything, but I think the below could have been slightly more readable in say React...
 
 		const innerHeader = $("<div>", {
 			class: "sub header",
@@ -149,12 +153,12 @@ class SocketConnection {
 		}
 	}
 
-	private handleClientsResponse(clientsData: any) {
+	private handleClientsResponse(clientsDataRaw: any) {
 		if ($("#recipientSelector").hasClass("disabled")) {
 			$("#recipientSelector").removeClass("disabled");
 		}
 
-		const availableClients = clientsData.clients.clients as ClientData[];
+		const availableClients = clientsDataRaw.clients.clients as ClientData[];
 		// update our current list
 		this.clients = availableClients;
 
@@ -176,8 +180,6 @@ class SocketConnection {
 	}
 	// had to define it as an arrow function otherwise I couldn't call this.handle...
 	private onSocketMessage = (ev: MessageEvent): void => {
-
-		// we can either receive list of clients or actual message
 		const receivedData = JSON.parse(ev.data);
 
 		if (receivedData.hasOwnProperty("fetch")) {
@@ -186,7 +188,7 @@ class SocketConnection {
 			return this.handleClientsResponse(receivedData);
 		} else if (receivedData.hasOwnProperty("details")) {
 			this.ownDetails = receivedData.details.details;
-			// fix up encoding
+			// fix up encoding (from stdEncoding to urlEncoding, which is currently used by the mixes)
 			this.ownDetails.id = base64url.fromBase64(this.ownDetails.id);
 			this.ownDetails.pubKey = base64url.fromBase64(this.ownDetails.pubKey);
 			this.ownDetails.provider.id = base64url.fromBase64(this.ownDetails.provider.id);
@@ -216,11 +218,13 @@ function formatDisplayedClient(client: ClientData): string {
 }
 
 function createChatMessage(senderID: string, content: string, isReply: boolean = false) {
+	// again, not saying anything, but I think the below could have been slightly more readable in say React... : )
+
 	const textDiv = $("<div>", {
 		class: "text",
 	}).text(content);
 
-	// TODO: we really should get it from message itself rather than use local time, but oh well
+	// TODO: should we use local time or rather timestamp message when it's sent?
 	const dateDiv = $("<div>", {
 		class: "date",
 	}).text(new Date().toLocaleTimeString());
@@ -275,13 +279,14 @@ function handleSendAction(conn: SocketConnection) {
 
 function main() {
 	const port: string = ipcRenderer.sendSync("port");
+	const parsedPort = parseInt(port, 10);
 
-	let conn = new SocketConnection(port);
+	let conn = new SocketConnection(parsedPort);
 	$("#closeWS").click(() => {
 		conn.closeConnection();
 	});
 	$("#remakeWS").click(() => {
-		conn = new SocketConnection(port);
+		conn = new SocketConnection(parsedPort);
 		$("#noticeDiv").html("");
 	});
 	$("#getClients").click(() => {
