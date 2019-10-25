@@ -8,12 +8,13 @@
   },
   "description": "",
   "scripts": {
-    "prestart": "yarn build",
+    "prebuild": "if cd nym-mixnet; then git pull; else git clone https://github.com/nymtech/nym-mixnet.git; fi",
     "build": "webpack --mode development --config webpack.config.js && yarn prepare-loopix",
-    "start": "electron ./dist/main.js electronChat1 9000",
+    "prestart": "yarn build",
+    "start": "electron ./dist/main.js",
     "pack": "yarn build && electron-builder --dir",
     "dist": "yarn build && electron-builder",
-    "prepare-loopix": "cwd=$(pwd) && cd $HOME/workspace/nym-related/nym-mixnet/cmd/loopix-client && go build -o $cwd/dist/loopix-client"
+    "prepare-loopix": "cd nym-mixnet/cmd/loopix-client && go build -o ../../../dist/loopix-client"
   },
   "main": "./dist/main.js",
   "build": {
@@ -39,6 +40,8 @@
   "repository": "https://github.com/nymtech/demo-mixnet-chat-client",
   "license": "Apache-2.0",
   "devDependencies": {
+    "electron": "^7.0.0",
+    "electron-builder": "^21.2.0",
     "tslint": "^5.20.0",
     "tslint-config-standard": "^8.0.1",
     "tslint-loader": "^3.5.4"
@@ -55,8 +58,6 @@
     "base64url": "^3.0.1",
     "copy-webpack-plugin": "^5.0.4",
     "css-loader": "^3.2.0",
-    "electron": "^6.1.2",
-    "electron-builder": "^21.2.0",
     "file-loader": "^4.2.0",
     "fix-path": "^2.1.0",
     "get-port": "^5.0.0",
