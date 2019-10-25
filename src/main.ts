@@ -1,9 +1,8 @@
-import { execFile, execFileSync } from "child_process";
+import { execFile, execFileSync, execSync } from "child_process";
 import { app, BrowserWindow, ipcMain } from "electron";
 import * as fs from "fs";
 import * as getPort from "get-port";
 import * as path from "path";
-
 // apparently needed in some cases on macOS:
 // however, doesn't have d.ts definitions so needs to be imported via a require.
 const fixPath = require("fix-path");
@@ -53,7 +52,8 @@ async function onReady() {
 	if (process.argv.length > 3) {
 		loopixPort = process.argv[3];
 	} else {
-		loopixPort = await getPort();
+		const loopixPortNum = await getPort();
+		loopixPort = loopixPortNum.toString();
 	}
 
 	console.log(`Chosen loopix client ID: ${loopixID}`);
@@ -64,22 +64,26 @@ async function onReady() {
 		fs.writeFileSync("savedID.nymchat", loopixID);
 		console.log("Saved the id!");
 
-		const out = execFileSync(path.resolve("dist/loopix-client"), ["init", "--id", loopixID]);
+		const out = execFileSync(path.resolve(__dirname, "loopix-client"), ["init", "--id", loopixID]);
 		console.log(out.toString());
 	}
 
-	const loopixClient = execFile(path.resolve("dist/loopix-client"),
+	const loopixClient = execFile(
+		path.resolve(__dirname, "loopix-client"),
 		["socket", "--id", loopixID, "--socket", "websocket", "--port", loopixPort],
-		(error: Error, stdout: string | Buffer, stderr: string | Buffer) => {
-		if (error) {
-			if (error.killed === true) {
-				// we killed it so we can ignore the error
-				console.log("We killed the loopix-client process ourselves");
-			} else {
-				throw error;
-			}
-		}
-	});
+		{},
+		(
+			(error: Error | null, stdout: string | Buffer, stderr: string | Buffer) => {
+				if (error) {
+					if (error.killed === true) {
+						// we killed it so we can ignore the error
+						console.log("We killed the loopix-client process ourselves");
+					} else {
+						throw error;
+					}
+				}
+			}),
+		);
 
 	loopixClient.on("error", (err: Error) => {
 		throw new Error(`Error when handling loopix-client: ${err}`);
@@ -101,7 +105,7 @@ async function onReady() {
 
 
 	// and load the index.html of the app.
-	mainWindow.loadFile(path.resolve("dist/index.html"));
+	mainWindow.loadFile(path.resolve(__dirname, "index.html"));
 
 	// Open the DevTools.
 	if (!app.isPackaged) {

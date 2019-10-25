@@ -9,6 +9,9 @@ const commonConfig = {
     path: path.resolve(__dirname, 'dist'),
     filename: '[name].js'
   },
+  node: {
+    __dirname: false,
+  },
   optimization: {
     splitChunks: {
       cacheGroups: {
