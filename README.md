@@ -4,11 +4,16 @@
 
 This is a simple chat application. You can start a few clients in different console windows, and chat back and forth.  Chat traffic is encrypted and routed through the [nym-mixnet](https://github.com/nymtech/nym-mixnet).
 
-## Requirements
+## Running built binaries   
+
+You can download Mac, Linux, and Windows versions of the console chat client from the [releases](https://github.com/nymtech/demo-mixnet-chat-client/releases) page of this Github repository.
+
+## Building it 
+
+### Requirements
 
 * Go 1.12 or later
 
-## Building it 
 
 From the top-level directory, `make` will build the binary. `./build/chat-client` will show a help screen. 
 
