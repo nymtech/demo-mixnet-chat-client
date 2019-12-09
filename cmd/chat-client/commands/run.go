@@ -1,4 +1,4 @@
-// Copyright 2019 The Loopix-Messaging Authors
+// Copyright 2019 The Nym Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,11 +16,12 @@ package commands
 
 import (
 	"fmt"
-	"github.com/nymtech/demo-mixnet-chat-client/chat-client"
+	"os"
+
+	chat_client "github.com/nymtech/demo-mixnet-chat-client/chat-client"
 	clientConfig "github.com/nymtech/nym-mixnet/client/config"
 	"github.com/nymtech/nym-mixnet/helpers"
 	"github.com/tav/golly/optparse"
-	"os"
 )
 
 const (
@@ -30,7 +31,7 @@ const (
 //nolint: lll
 func RunCmd(args []string, usage string) {
 	opts := newOpts("run [OPTIONS]", usage)
-	id := opts.Flags("--id").Label("ID").String("Id of the loopix-mixnet-client we will use to run", defaultID)
+	id := opts.Flags("--id").Label("ID").String("Id of the nym mixnet client we will use to run", defaultID)
 	customConfigPath := opts.Flags("--customCfg").Label("CUSTOMCFG").String("Path to custom configuration file of the mixnet client", "")
 
 	params := opts.Parse(args)
@@ -76,5 +77,5 @@ func RunCmd(args []string, usage string) {
 }
 
 func newOpts(command string, usage string) *optparse.Parser {
-	return optparse.New("Usage: loopix-client " + command + "\n\n  " + usage + "\n")
+	return optparse.New("Usage: chat-client " + command + "\n\n  " + usage + "\n")
 }
