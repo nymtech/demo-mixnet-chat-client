@@ -97,6 +97,7 @@ github.com/mattn/go-runewidth v0.0.4 h1:2BvfKmzob6Bmd4YsL0zygOqfdFnK7GR4QL06Do4/
 github.com/mattn/go-runewidth v0.0.4/go.mod h1:LwmH8dsx7+W8Uxz3IHJYH5QSwggIsqBzpuz5H//U1FU=
 github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b h1:j7+1HpAFS1zy5+Q4qx1fWh90gTKwiN4QCGoY9TWyyO4=
 github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b/go.mod h1:01TrycV0kFyexm33Z7vhZRXopbI8J3TDReVlkTgMUxE=
+github.com/microcosm-cc/bluemonday v1.0.2/go.mod h1:iVP4YcDBq+n/5fb23BhYFvIMq/leAFZyRl6bYmGDlGc=
 github.com/mitchellh/go-homedir v1.1.0/go.mod h1:SfyaCUpYCn1Vlf4IUYiD9fPX4A5wJrkLzIz1N1q0pr0=
 github.com/mitchellh/mapstructure v1.1.2/go.mod h1:FVVH3fgwuzCH5S8UJGiWEs2h04kUh9fWfEaFds41c1Y=
 github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
@@ -107,6 +108,8 @@ github.com/nsf/termbox-go v0.0.0-20190817171036-93860e161317 h1:hhGN4SFXgXo61Q4S
 github.com/nsf/termbox-go v0.0.0-20190817171036-93860e161317/go.mod h1:IuKpRQcYE1Tfu+oAQqaLisqDeXgjyyltCfsaoYN18NQ=
 github.com/nymtech/nym-directory v0.0.3 h1:wL1Y1+ibwnJ5PBC/FWjC4K4AMbMhYBtE11oUJjNdDr4=
 github.com/nymtech/nym-directory v0.0.3/go.mod h1:VMCDG/ZePzY80zE/YjT7Dt/yynrR3R8gWrNOD2clcGg=
+github.com/nymtech/nym-directory v0.0.4 h1:zSmFoW6sL0vJhptC2457c9Hzoi8iJrjCxO/24+wnxLE=
+github.com/nymtech/nym-directory v0.0.4/go.mod h1:JeHSGkTMT0geAbZzTqR6ourEWigAN8xpSYDviMEw6FA=
 github.com/nymtech/nym-mixnet v0.1.0 h1:jr62XVBnRiedWOdEkqR8X8Rm6cplg24IZKf1/a+Hqxw=
 github.com/nymtech/nym-mixnet v0.1.0/go.mod h1:dOhj/73sM3N8digrpGQvHHRAorg4X7vxh8A1gBAMiEA=
 github.com/nymtech/nym-mixnet v0.1.1 h1:qNPMIdDDjvb9zDo1HM05i63h09lcO31JkAM0MoGRGmA=
@@ -119,6 +122,8 @@ github.com/nymtech/nym-mixnet v0.1.4 h1:cx0D7NPeA7SCaknUHq+LDlGmzA9bMlWYjC+ghiXP
 github.com/nymtech/nym-mixnet v0.1.4/go.mod h1:dOhj/73sM3N8digrpGQvHHRAorg4X7vxh8A1gBAMiEA=
 github.com/nymtech/nym-mixnet v0.1.5 h1:2rCHwLWN252JpNMfZhozMt6kzSPeNxXgerBFVX1PSGw=
 github.com/nymtech/nym-mixnet v0.1.5/go.mod h1:DiKY1awqolVHiSMNNYs8BnVLZG8P4aMF9pqETSvOV5Q=
+github.com/nymtech/nym-mixnet v0.4.0 h1:aUyx7e7w3esVejKYn7adal9CfUwHi/v99Z0pZ8k80JA=
+github.com/nymtech/nym-mixnet v0.4.0/go.mod h1:M7kFUSqi5KkHk8ypfqeZkZXSW1TBzGNIxUohtG1xh2g=
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/ginkgo v1.7.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/ginkgo v1.10.1/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
