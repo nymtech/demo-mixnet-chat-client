@@ -38,5 +38,5 @@ func main() {
 		"run":  "Run a persistent demo-chat client process",
 		"init": "Initialise a base Nym Mixnet client",
 	}
-	optparse.Commands("demo-mixnet-chat-client", "0.0.2", cmds, info, logo)
+	optparse.Commands("demo-mixnet-chat-client", "0.0.3", cmds, info, logo)
 }
