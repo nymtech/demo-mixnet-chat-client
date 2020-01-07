@@ -1,5 +1,7 @@
 # demo-mixnet-chat-client
 
+**Archived: this client worked with our old Go mixnet. We've switched to Rust, so this repo is now read-only.**
+
 **Note: don't depend on this for anything serious, it's a demo rather than a production application.**
 
 This is a simple chat application. You can start a few clients in different console windows, and chat back and forth.  Chat traffic is encrypted and routed through the [nym-mixnet](https://github.com/nymtech/nym-mixnet).
